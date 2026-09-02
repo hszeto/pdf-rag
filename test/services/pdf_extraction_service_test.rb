@@ -64,33 +64,26 @@ class PdfExtractionServiceTest < ActiveSupport::TestCase
   end
 
 
-  # D12. A real 140-page policy took 15.8s to read whole and produced ~106,000
-  # tokens; the cap brings that to ~2.3s and ~13,200. These assert the cap holds
-  # rather than the timings, which vary by machine.
-  test "reads no more than the page cap" do
+  # The 20-page cap this service used to carry existed because the whole text was
+  # sent to the model. Retrieval replaces it, so the whole document is read —
+  # and a question about page 30 is now answerable rather than a dead end.
+  test "reads the whole document, however long" do
     text = PdfExtractionService.new(upload("long_policy.pdf")).extract!
 
     assert_includes text, "PAGEMARKER001"
-    assert_includes text, "PAGEMARKER020", "everything up to the cap should be read"
-    assert_not_includes text, "PAGEMARKER021", "nothing past the cap should be read"
-    assert_not_includes text, "PAGEMARKER030"
+    assert_includes text, "PAGEMARKER021", "page 21 was outside the old cap"
+    assert_includes text, "PAGEMARKER030", "the last page must be read too"
   end
 
-  test "a document shorter than the cap is read whole" do
-    text = PdfExtractionService.new(upload("insurance_sample.pdf")).extract!
+  test "reports pages individually so a chunk can cite one" do
+    pages = PdfExtractionService.new(upload("long_policy.pdf")).pages
 
-    assert_includes text, "Member Services"
-    assert_includes text, "Evidence of Coverage", "the last line of a short document is still read"
+    assert_equal 30, pages.length
+    assert_equal (1..30).to_a, pages.map(&:number)
+    assert_includes pages.first.text, "PAGEMARKER001"
+    assert_includes pages.last.text, "PAGEMARKER030"
   end
 
-  test "the cap bounds how much text a long document can contribute" do
-    capped = PdfExtractionService.new(upload("long_policy.pdf")).extract!
-    whole = PDF::Reader.new(file_fixture("long_policy.pdf").to_s).pages.map(&:text).join("\n")
-
-    assert_operator capped.length, :<, whole.length
-    assert_in_delta 20.0 / 30.0, capped.length.to_f / whole.length, 0.1,
-      "roughly two thirds of a thirty page document should survive a twenty page cap"
-  end
   private
     def upload(name) = fixture_file_upload(name, "application/pdf")
 

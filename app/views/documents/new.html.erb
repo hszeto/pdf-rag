@@ -10,7 +10,7 @@
   Add a PDF and we'll read it, then answer your questions about what's inside.
 </p>
 
-<%= form_with url: document_path, method: :post, class: "mb-8" do |form| %>
+<%= form_with url: documents_path, method: :post, class: "mb-8" do |form| %>
   <%= form.label :document, "Add a PDF", class: "block text-lead font-bold mb-4" %>
   <%= form.file_field :document, accept: "application/pdf", required: true,
         class: "block w-full text-body border-2 border-rule rounded-lg p-4 mb-6" %>

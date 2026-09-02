@@ -2,7 +2,7 @@ Rails.application.routes.draw do
   root "documents#new"
 
   # One document at a time; there are no accounts and nothing to list.
-  resource :document, only: [ :create ]
+  resources :documents, only: [ :create, :show ]
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.

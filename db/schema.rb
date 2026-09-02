@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_02_224820) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_02_230002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -43,6 +43,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_02_224820) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "document_chunks", force: :cascade do |t|
+    t.text "content", null: false
+    t.datetime "created_at", null: false
+    t.bigint "document_id", null: false
+    t.vector "embedding", limit: 3072
+    t.integer "page"
+    t.integer "position", null: false
+    t.datetime "updated_at", null: false
+    t.index ["document_id", "position"], name: "index_document_chunks_on_document_id_and_position", unique: true
+    t.index ["document_id"], name: "index_document_chunks_on_document_id"
+  end
+
+  create_table "documents", force: :cascade do |t|
+    t.jsonb "attachments", default: [], null: false
+    t.string "content_hash"
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.string "failure_reason"
+    t.jsonb "links", default: [], null: false
+    t.string "status", default: "pending", null: false
+    t.text "summary"
+    t.string "title"
+    t.datetime "updated_at", null: false
+    t.index ["content_hash"], name: "index_documents_on_content_hash"
+    t.index ["expires_at"], name: "index_documents_on_expires_at"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "document_chunks", "documents", on_delete: :cascade
 end
