@@ -1,0 +1,22 @@
+# PostgreSQL with pgvector. See config/environments for the Redis cache and
+# Sidekiq configuration, which are separate concerns.
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+
+development:
+  <<: *default
+  database: pdf_rag_development
+
+# Each parallel test worker gets its own database. The suite has always run
+# parallel; it simply had no database to collide over until now.
+test:
+  <<: *default
+  database: pdf_rag_test
+
+production:
+  <<: *default
+  database: pdf_rag_production
+  username: pdf_rag
+  password: <%= ENV["PDF_RAG_DATABASE_PASSWORD"] %>

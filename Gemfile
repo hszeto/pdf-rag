@@ -36,6 +36,15 @@ gem "thruster", require: false
 
 gem "pdf-reader"
 
+# Structural inspection of uploaded PDFs: embedded scripts, launch actions,
+# attachments and links. The maintained fork of `origami`, whose last release
+# was 2017 and which does not run on current Ruby.
+gem "origamindee"
+
+# Postgres, and vector similarity search over document chunks.
+gem "pg"
+gem "neighbor"
+
 # Background jobs. The Gemini analysis call is unbounded — seconds on a small
 # document, far longer on a large one — so it runs off the request. Sidekiq uses
 # the Redis this app already requires for its session cache.

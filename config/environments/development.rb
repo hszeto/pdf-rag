@@ -30,7 +30,7 @@ Rails.application.configure do
   # Redis DB 0; config/cable.yml uses DB 1.
   config.cache_store = :redis_cache_store, {
     url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0"),
-    namespace: "insurance_helper_development",
+    namespace: "pdf_rag_development",
     pool: { size: ENV.fetch("RAILS_MAX_THREADS", 3).to_i },
     error_handler: ->(method:, returning:, exception:) do
       Rails.logger.error("[cache] Redis #{method} failed: #{exception.class}: #{exception.message}")

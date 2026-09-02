@@ -1,0 +1,15 @@
+<%# The upload screen. The form gains its action, screening and ingestion with
+    the Document model in the next checkpoints. %>
+<% if flash[:alert].present? %>
+  <%= render "documents/error", message: flash[:alert] %>
+<% end %>
+
+<h1 class="text-title font-bold mb-4">Understand any document</h1>
+
+<p class="text-lead mb-10">
+  Add a PDF and we'll read it, then answer your questions about what's inside.
+</p>
+
+<p class="text-body text-ink-muted">
+  Your document is removed automatically an hour after you add it.
+</p>

@@ -24,7 +24,3 @@ module ActiveSupport
     # Add more helper methods to be used by all tests here...
   end
 end
-
-class ActionDispatch::IntegrationTest
-  include DocumentUploading
-end
