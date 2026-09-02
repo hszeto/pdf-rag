@@ -26,6 +26,11 @@ Rails.application.configure do
   # own isolated store.
   config.cache_store = :memory_store
 
+  # Jobs are enqueued, not run, unless a test asks for it. application.rb sets
+  # the Sidekiq adapter for real environments; the suite must not need Redis or
+  # a worker process.
+  config.active_job.queue_adapter = :test
+
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable
 

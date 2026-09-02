@@ -9,9 +9,10 @@ class InsuranceSession
   include ActiveModel::Model
   include ActiveModel::Attributes
 
-  # "empty" covers a session created on first visit that has no document yet.
-  # The spec's R2 lists only the three post-upload states.
-  STATUSES = %w[empty uploaded extracted error].freeze
+  # "empty" covers a session created on first visit that has no document yet;
+  # "analyzing" covers the window while the background job is reading it. The
+  # spec lists only the three settled states.
+  STATUSES = %w[empty uploaded analyzing extracted error].freeze
 
   FIELD_KEYS = %i[
     member_name plan_type plan_name insurance_id
@@ -24,6 +25,9 @@ class InsuranceSession
   attribute :plain_summary, :string
   attribute :full_text, :string
   attribute :document_type, :string
+  # What went wrong, when it went wrong inside the job rather than the request.
+  attribute :error_message, :string
+  attribute :analyzing_since, :datetime
   attribute :created_at, :datetime
   attribute :last_active_at, :datetime
 
@@ -56,6 +60,7 @@ class InsuranceSession
   end
 
   def empty? = status == "empty"
+  def analyzing? = status == "analyzing"
   def extracted? = status == "extracted"
   def error? = status == "error"
 

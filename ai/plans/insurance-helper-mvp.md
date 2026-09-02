@@ -171,6 +171,17 @@ for the user to commit before starting the next.
    with example questions.
    *Verifies:* AC 15–18.
 
+5b. **Extraction page cap (D12).** `PdfExtractionService` reads at most 20 pages. Added
+    after a real 140-page policy measured 15.8s of extraction and ~106k tokens.
+    *Verifies:* extraction time and payload size stay bounded regardless of document
+    length; the nine fields still extract.
+
+5c. **Background analysis with Sidekiq (D6 revised).** Sidekiq gem and config, an
+    `AnalyzeDocumentJob` taking only the session id, `analyzing` status, and R7.2's
+    processing screen with polling, rotating messages and the 20-second "taking a
+    little longer" message. Extraction stays on the request; only the Gemini call moves.
+    *Verifies:* R7.2, and that a slow analysis no longer blocks a Puma thread.
+
 6. **Idle UX.** `idle_controller.js`, banner at 3:00, wipe at 5:00, throttled heartbeat.
    *Verifies:* AC 19–21.
 
@@ -261,8 +272,9 @@ out of `bin/ci`** and only run in `.github/workflows/ci.yml`.
   only guard; a pilot needs paid billing enabled first.
 
 **Technical risk**
-- **~3 concurrent uploads saturate Puma** (D6, 3 threads, 5–20s calls). Accepted for a
-  demo; it is the reason Sidekiq is the next phase.
+- **Superseded:** the original "~3 concurrent uploads saturate Puma" risk understated
+  the problem. A real 140-page policy spent 15.8s in `pdf-reader` before any API call.
+  Addressed by the page cap (D12) and by moving analysis to Sidekiq (D6 revised).
 - **A failed cache write makes an upload vanish** — the user sees success, then an
   instantly empty session. R3.6 covers surfacing it; easy to overlook because the
   configured `error_handler` swallows Redis errors by design.

@@ -95,10 +95,45 @@ original 1-minute one.
 built-in behavior, which already renders `public/406-unsupported-browser.html` — a file
 that already exists in this repo. Work is a copy rewrite for this audience, not code.
 
-**D6 — Synchronous processing.** The Gemini extraction call runs inline. Scope is "a demo
-for a handful of concurrent users." **Sidekiq is explicitly wanted in the next phase** —
-keep the Gemini call inside a service object so a job can wrap it later without
-restructuring. Accepted consequence: ~3 concurrent uploads saturate Puma's threads.
+**D6 — Background processing with Sidekiq. Revised 2026-09-02.**
+
+*Originally:* the Gemini call ran synchronously, with Sidekiq deferred to the next
+phase, on the understanding that documents were 3,000–10,000 tokens and the only slow
+part was a 5–20s API call.
+
+*What changed:* a real policy document (Sample Medical Policy NY IEX 2026) measured
+**140 pages, ~106,000 tokens**, and `pdf-reader` took **15.8 seconds** of CPU-bound work
+to extract it — before any API call. Three concurrent uploads would have stopped the
+server answering anything, heartbeats included, so idle timers would fire on active
+readers. The synchronous design was reasonable for the documents the spec described and
+is not reasonable for the documents that actually arrive.
+
+*Now:*
+- **Extraction stays synchronous** but is bounded by a page cap (D12), which brings it to
+  roughly 2.3 seconds regardless of how long the document is.
+- **The Gemini analysis call moves to a Sidekiq job.** It is the unbounded part — 2s on a
+  small document, far longer on a large one, and subject to upstream slowness and
+  retries.
+- The job receives only the session id. The document text is already in the cache, so no
+  file bytes pass through the queue and nothing touches disk (R3.5 still holds).
+- Session status gains `analyzing`, between `uploaded` and `extracted`.
+- **R7.2's processing screen stops being optional.** With analysis off the request, the
+  reader needs to be told the document is being read, which is what the spec asked for
+  anyway.
+
+Sidekiq uses the Redis already required by D1, on a separate database from the cache
+(DB 0) and Action Cable (DB 1).
+
+**D12 — Extraction is capped at 20 pages.** Measured on the 140-page policy: 20 pages
+takes 2,286ms and yields ~13,200 tokens, against 19,528ms and ~106,000 tokens for the
+whole document — 8.5x faster and 8x cheaper. `Deductible` and `Copayment` both first
+appear on page 4, so every field the plan screen shows lives inside the cap.
+
+Accepted consequence: a question about something only in the later pages cannot be
+answered. The app already handles that honestly — it says the document does not cover it
+and gives the plan's phone number — which is the right failure for this audience.
+Revisit with retrieval over `full_text` only if real usage shows fallback questions are
+both frequent and about deep content.
 
 **D7 — Gemini client. Verified working 2026-09-01.** Model `gemini-2.5-flash` via the
 Gemini Developer API:
@@ -185,7 +220,7 @@ The cached value holds:
   rather than an apparently-successful upload that instantly vanishes (D1).
 
 ### R4 — Text extraction (`PdfExtractionService`)
-- R4.1 Extract text with `pdf-reader`.
+- R4.1 Extract text with `pdf-reader`, reading at most the first 20 pages (D12).
 - R4.2 If extracted text is below a "near-empty" threshold (~200 chars), the document
   is scanned/image-only: show the "we could not read the words in this document" error
   with a retry, and make no Gemini call (D3). Vision fallback is deferred.

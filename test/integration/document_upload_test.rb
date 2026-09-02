@@ -4,12 +4,10 @@ class DocumentUploadTest < ActionDispatch::IntegrationTest
   setup { Rails.cache.clear }
 
   test "a valid insurance PDF is read, analysed and stored on the session" do
-    stub_gemini(gemini_analysis) do
-      post document_path, params: { document: upload("insurance_sample.pdf") }
-    end
+    upload_and_analyze
 
     assert_redirected_to root_path
-    session = SessionCache.find(session_id)
+    session = insurance_session
     assert_equal "extracted", session.status
     assert_includes session.full_text, "ACME HEALTH GOLD ADVANTAGE PLAN"
     assert_equal "$1,500", session.field(:deductible)
@@ -78,10 +76,8 @@ class DocumentUploadTest < ActionDispatch::IntegrationTest
   # must still get a file field. Without it the refusal is a dead end, which a
   # test starting from a fresh session never notices (R7.5).
   test "a refusal still offers a retry when a document is already held" do
-    stub_gemini(gemini_analysis) do
-      post document_path, params: { document: upload("insurance_sample.pdf") }
-    end
-    assert_equal "extracted", SessionCache.find(session_id).status
+    upload_and_analyze
+    assert_equal "extracted", insurance_session.status
 
     post document_path, params: { document: upload("actually_a_jpeg.pdf") }
 

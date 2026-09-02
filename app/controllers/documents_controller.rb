@@ -1,5 +1,9 @@
 class DocumentsController < ApplicationController
   # One document per session (R3.1). Adding another replaces what came before.
+  #
+  # Validation and text extraction stay on the request: both are bounded — the
+  # size check is a stat, and extraction is capped at twenty pages (D12). The
+  # analysis call is the unbounded part, so it goes to a job (D6).
   def create
     ensure_insurance_session
 
@@ -7,7 +11,7 @@ class DocumentsController < ApplicationController
     DocumentValidator.new(file).validate!
     text = PdfExtractionService.new(file).extract!
 
-    analyze_and_store(text)
+    hand_off_for_analysis(text)
     redirect_to root_path
   ensure
     # The bytes never outlive the request, whether it succeeded or failed (R3.5).
@@ -15,33 +19,19 @@ class DocumentsController < ApplicationController
   end
 
   private
-    # Exactly one Gemini call per upload: classification, field extraction and the
-    # plain-language summary all come back together (R5.1).
-    def analyze_and_store(text)
-      analysis = GeminiClient.new.analyze_document(text)
-
-      return discard_not_insurance unless analysis.insurance?
-
+    def hand_off_for_analysis(text)
       session = current_insurance_session
       session.full_text = text
-      session.document_type = analysis.document_type
-      session.structured_fields = analysis.structured_fields
-      session.plain_summary = analysis.plain_summary
-      session.status = "extracted"
-      SessionCache.write(session)
-    end
-
-    # The document is thrown away rather than kept around unread, so a file we
-    # have no use for is not sitting in the cache for the next five minutes
-    # (R5.2). No further calls are made for it.
-    def discard_not_insurance
-      session = current_insurance_session
-      session.full_text = nil
+      session.document_type = nil
+      session.structured_fields = InsuranceSession::FIELD_KEYS.index_with(nil)
       session.plain_summary = nil
-      session.status = "error"
+      session.error_message = nil
+      session.chat_history = []
+      session.status = "analyzing"
+      session.analyzing_since = Time.current
       SessionCache.write(session)
 
-      raise ProcessingError::NotInsurance
+      AnalyzeDocumentJob.perform_later(session.session_id)
     end
 
     # Rack cleans multipart tempfiles up at the end of the request anyway, but

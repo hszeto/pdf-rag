@@ -5,6 +5,17 @@ class PdfExtractionService
   # document. Reading those is deferred (D3).
   MINIMUM_TEXT_LENGTH = 200
 
+  # Real policy documents are far longer than the summaries this was first built
+  # for. One measured 140 pages and ~106,000 tokens, and took 15.8 seconds to
+  # read; capped at 20 pages the same file takes 2.3 seconds and yields ~13,200
+  # tokens. The fields the plan screen shows all appear by page 4, so the cap
+  # costs nothing for the documents people actually ask about (D12).
+  #
+  # The trade-off is that a question answerable only from the later pages cannot
+  # be answered. The app says so plainly and offers the plan phone number, which
+  # is a better outcome than a slow, expensive, or invented one.
+  MAX_PAGES = 20
+
   # The reader is injected so its failure modes can be driven directly in tests.
   # This project has no mocking library — Minitest 6 dropped Minitest::Mock and
   # there is no webmock or mocha — so a seam like this is the only way to reach
@@ -24,7 +35,7 @@ class PdfExtractionService
 
   private
     def read_text
-      @reader.new(@file.tempfile).pages.map(&:text).join("\n")
+      @reader.new(@file.tempfile).pages.first(MAX_PAGES).map(&:text).join("\n")
     # EncryptedPDFError is a subclass of UnsupportedFeatureError, so it has to be
     # rescued first to keep "locked" distinct from "damaged" (R3.4, R4.4).
     rescue PDF::Reader::EncryptedPDFError

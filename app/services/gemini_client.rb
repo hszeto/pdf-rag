@@ -95,7 +95,76 @@ class GeminiClient
     )
   end
 
+
+  ANSWER_SCHEMA = {
+    type: "OBJECT",
+    properties: {
+      answer: { type: "STRING" },
+      found_in_summary: { type: "BOOLEAN" }
+    },
+    required: %w[answer found_in_summary]
+  }.freeze
+
+  ANSWER_PROMPT = <<~PROMPT.freeze
+    You are helping an older adult understand their own health insurance.
+
+    How to write:
+    - Short sentences. Everyday words. No insurance jargon.
+    - Warm and calm, the way a helpful person at a desk would speak.
+    - Two or three sentences is usually enough.
+
+    What you may say:
+    - Answer only from the information given below. It is the only thing you know.
+    - Never use general knowledge about insurance. Plans differ, and a confident
+      wrong answer could cost this person money or medical care.
+    - If the information below does not answer the question, set found_in_summary
+      to false, say plainly that this document does not cover it, and tell them
+      to call their plan.
+
+    Set found_in_summary to true only when the information below actually
+    contains the answer.
+  PROMPT
+
+  Answer = Struct.new(:text, :found, keyword_init: true) do
+    def found? = found
+  end
+
+  # One Q&A turn. The caller decides what `context` is: normally the plain
+  # summary, and on the single retry the full document text (R6.1, R6.4).
+  def answer(question:, context:, history: [], phone: nil)
+    payload = {
+      contents: [ { parts: [ { text: answer_prompt(question, context, history, phone) } ] } ],
+      generationConfig: generation_config.merge(
+        responseMimeType: "application/json",
+        responseSchema: ANSWER_SCHEMA
+      )
+    }
+
+    parsed = request(payload)
+
+    Answer.new(
+      text: parsed["answer"].to_s,
+      found: parsed["found_in_summary"] == true
+    )
+  end
   private
+
+    def answer_prompt(question, context, history, phone)
+      sections = [ ANSWER_PROMPT ]
+      sections << "The number they can call is #{phone}." if phone.present?
+      sections << "Information from their document:\n#{context}"
+
+      if history.any?
+        conversation = history.map do |turn|
+          speaker = turn[:role].to_s == "user" ? "They asked" : "You answered"
+          "#{speaker}: #{turn[:content]}"
+        end
+        sections << "Earlier in this conversation:\n#{conversation.join("\n")}"
+      end
+
+      sections << "Their question: #{question}"
+      sections.join("\n\n")
+    end
     def generation_config
       {
         temperature: TEMPERATURE,
@@ -115,9 +184,40 @@ class GeminiClient
         body: payload.to_json
       )
 
-      raise ProcessingError::ServiceUnavailable, "http #{response.status}" unless response.ok?
+      raise upstream_error(response) unless response.ok?
 
       parse(response.body)
+    end
+
+    # Google returns the useful part — which quota was hit, and how long to wait —
+    # in the body, not the status line. Without pulling it out, a 429 for the
+    # daily cap is indistinguishable from a 429 for a burst, and the log says
+    # neither.
+    #
+    # Only the diagnostics are logged. The prompt carries the document text, and
+    # that must never reach a log file (R9.3).
+    def upstream_error(response)
+      detail = parse_error_body(response.body)
+      details = Array(detail&.dig("details"))
+      quota = details.flat_map { |d| Array(d["violations"]) }.filter_map { |v| v["quotaId"] }.first
+      retry_after = details.filter_map { |d| d["retryDelay"] }.first
+
+      Rails.logger.error(
+        "[gemini] request failed " \
+        "status=#{response.status} quota=#{quota || 'none'} " \
+        "retry_after=#{retry_after || 'none'} " \
+        "message=#{detail&.dig('message').to_s.truncate(200).inspect}"
+      )
+
+      ProcessingError::ServiceUnavailable.new(
+        [ "http #{response.status}", quota, retry_after ].compact.join(" ")
+      )
+    end
+
+    def parse_error_body(body)
+      JSON.parse(body.to_s)["error"]
+    rescue JSON::ParserError
+      nil
     end
 
     def parse(body)

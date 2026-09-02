@@ -54,14 +54,19 @@ class PlanScreenTest < ApplicationSystemTestCase
     end
 
     def visit_plan
-      # The wait belongs inside the stub: click_on returns as soon as the click
-      # is dispatched, so restoring the transport outside the block races the
-      # server thread that is still handling the POST.
+      # Every wait belongs inside the stub: click_on returns as soon as the click
+      # is dispatched, so anything outside the block races the server thread that
+      # is still handling the POST.
       stub_gemini(gemini_analysis) do
         visit root_path
         attach_file "document", Rails.root.join("test/fixtures/files/insurance_sample.pdf")
         click_on "Read my document"
-        assert_selector "h1", text: "Your plan"
+
+        # Wait for the upload to actually land before draining the queue —
+        # otherwise the job has not been enqueued yet and there is nothing to run.
+        assert_selector "h1", text: "Reading your document"
+        perform_enqueued_jobs
+        assert_selector "h1", text: "Your plan", wait: 10
       end
     end
 end

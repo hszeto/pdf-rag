@@ -89,9 +89,7 @@ class PlanScreenTest < ActionDispatch::IntegrationTest
   private
     def view_plan(structured_fields: nil)
       payload = structured_fields ? gemini_analysis(structured_fields: structured_fields) : gemini_analysis
-      stub_gemini(payload) do
-        post document_path, params: { document: fixture_file_upload("insurance_sample.pdf", "application/pdf") }
-      end
+      upload_and_analyze("insurance_sample.pdf", payload)
       get root_path
     end
 end

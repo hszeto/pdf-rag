@@ -9,6 +9,7 @@ module ActiveSupport
     # Run tests in parallel with specified workers
     parallelize(workers: :number_of_processors)
 
+    include ActiveJob::TestHelper
     include GeminiStubbing
 
     # No test may reach the live API. Without this a forgotten stub would make a
@@ -22,4 +23,8 @@ module ActiveSupport
 
     # Add more helper methods to be used by all tests here...
   end
+end
+
+class ActionDispatch::IntegrationTest
+  include DocumentUploading
 end

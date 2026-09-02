@@ -63,6 +63,34 @@ class PdfExtractionServiceTest < ActiveSupport::TestCase
     end
   end
 
+
+  # D12. A real 140-page policy took 15.8s to read whole and produced ~106,000
+  # tokens; the cap brings that to ~2.3s and ~13,200. These assert the cap holds
+  # rather than the timings, which vary by machine.
+  test "reads no more than the page cap" do
+    text = PdfExtractionService.new(upload("long_policy.pdf")).extract!
+
+    assert_includes text, "PAGEMARKER001"
+    assert_includes text, "PAGEMARKER020", "everything up to the cap should be read"
+    assert_not_includes text, "PAGEMARKER021", "nothing past the cap should be read"
+    assert_not_includes text, "PAGEMARKER030"
+  end
+
+  test "a document shorter than the cap is read whole" do
+    text = PdfExtractionService.new(upload("insurance_sample.pdf")).extract!
+
+    assert_includes text, "Member Services"
+    assert_includes text, "Evidence of Coverage", "the last line of a short document is still read"
+  end
+
+  test "the cap bounds how much text a long document can contribute" do
+    capped = PdfExtractionService.new(upload("long_policy.pdf")).extract!
+    whole = PDF::Reader.new(file_fixture("long_policy.pdf").to_s).pages.map(&:text).join("\n")
+
+    assert_operator capped.length, :<, whole.length
+    assert_in_delta 20.0 / 30.0, capped.length.to_f / whole.length, 0.1,
+      "roughly two thirds of a thirty page document should survive a twenty page cap"
+  end
   private
     def upload(name) = fixture_file_upload(name, "application/pdf")
 

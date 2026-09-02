@@ -36,6 +36,11 @@ gem "thruster", require: false
 
 gem "pdf-reader"
 
+# Background jobs. The Gemini analysis call is unbounded — seconds on a small
+# document, far longer on a large one — so it runs off the request. Sidekiq uses
+# the Redis this app already requires for its session cache.
+gem "sidekiq"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"

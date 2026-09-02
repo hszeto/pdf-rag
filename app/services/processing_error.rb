@@ -56,6 +56,14 @@ class ProcessingError < StandardError
     def user_message = "We could not hold on to your document just now. Please try again."
   end
 
+  class EmptyQuestion < ProcessingError
+    def user_message = "Please type a question first."
+  end
+
+  class NoDocument < ProcessingError
+    def user_message = "Please add your insurance document first."
+  end
+
   class ServiceUnavailable < ProcessingError
     def user_message = "We are having trouble reading documents right now. Please try again in a moment."
   end

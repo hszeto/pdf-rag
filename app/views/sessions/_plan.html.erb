@@ -30,7 +30,11 @@
   <p class="text-body"><%= session.plain_summary %></p>
 </section>
 
+<%= render "sessions/chat" %>
+
 <%= render "sessions/grounding_note" %>
+
+<%= render "sessions/replace_document" %>
 
 <%= button_to "Remove my document", session_path, method: :delete,
       class: "rounded-lg border-2 border-accent text-accent px-6 py-4 text-lead font-bold" %>
