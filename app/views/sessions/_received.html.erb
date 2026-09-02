@@ -1,0 +1,11 @@
+<%# Interim state for this checkpoint: the words are out of the document but
+    nothing has read them yet. The plan screen arrives with the analysis call. %>
+<h1 class="text-3xl font-bold mb-4">We have your document</h1>
+
+<p class="text-lg mb-6">
+  We found <%= number_with_delimiter(current_insurance_session.full_text.to_s.length) %>
+  characters of text. Making sense of it comes next.
+</p>
+
+<%= button_to "Remove my document", session_path, method: :delete,
+      class: "rounded border px-6 py-3 text-lg" %>

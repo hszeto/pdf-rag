@@ -4,6 +4,9 @@ Rails.application.routes.draw do
   # in any path and there is no session-creation endpoint.
   root "sessions#show"
 
+  # One document per session; posting another replaces it (R3.1).
+  resource :document, only: [ :create ]
+
   post   "heartbeat" => "sessions#heartbeat", as: :heartbeat
   delete "session"   => "sessions#destroy",   as: :session
 

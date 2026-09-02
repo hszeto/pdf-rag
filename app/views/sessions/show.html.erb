@@ -1,9 +1,25 @@
 <%# Which screen shows is driven by session status. Styling is deliberately
-    minimal here — the large-type, high-contrast pass is a later checkpoint. %>
+    minimal here — the large-type, high-contrast pass is a later checkpoint.
+
+    Partials are named with their full path because this template is also
+    rendered from other controllers when a document is refused, and a bare name
+    would be looked up against that controller's view directory. %>
 <div class="w-full">
-  <% if session_expired? %>
-    <%= render "removed_notice" %>
+  <% if flash[:alert].present? %>
+    <%= render "sessions/error", message: flash[:alert] %>
   <% end %>
 
-  <%= render "landing" %>
+  <% if session_expired? %>
+    <%= render "sessions/removed_notice" %>
+  <% end %>
+
+  <%# An error always falls through to the landing screen, because that is what
+      carries the file field. Showing a refusal on a screen with no way to try
+      again would be exactly the dead end R7.5 rules out — which is easy to hit
+      when the visitor already had a document and the replacement was refused. %>
+  <% if current_insurance_session&.status == "uploaded" && flash[:alert].blank? %>
+    <%= render "sessions/received" %>
+  <% else %>
+    <%= render "sessions/landing" %>
+  <% end %>
 </div>

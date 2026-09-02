@@ -6,6 +6,9 @@
   Your document is deleted automatically after you're done.
 </p>
 
-<p class="text-lg">
-  <em>Adding a document comes next.</em>
-</p>
+<%= form_with url: document_path, method: :post, class: "mb-4" do |form| %>
+  <%= form.label :document, "Add Your Insurance Document", class: "block text-lg mb-2" %>
+  <%= form.file_field :document, accept: "application/pdf", required: true,
+        class: "block mb-4 text-lg" %>
+  <%= form.submit "Read my document", class: "rounded border px-6 py-3 text-lg" %>
+<% end %>

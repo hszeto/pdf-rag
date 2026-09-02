@@ -23,9 +23,15 @@ class SessionCache
       InsuranceSession.from_h(store.read(key_for(id)))
     end
 
+    # Raises rather than failing quietly when the store rejects the write. The
+    # configured error_handler swallows Redis failures and returns nil, so without
+    # this an upload would report success and then vanish on the next request,
+    # which reads to the user like their document was lost (R3.6).
     def write(session)
       session.last_active_at = Time.current
-      store.write(key_for(session.session_id), session.to_h, expires_in: TTL)
+      ok = store.write(key_for(session.session_id), session.to_h, expires_in: TTL)
+      raise ProcessingError::StorageFailure unless ok
+
       session
     end
 
