@@ -7,7 +7,7 @@ class DocumentsController < ApplicationController
     DocumentValidator.new(file).validate!
     text = PdfExtractionService.new(file).extract!
 
-    store_document(text)
+    analyze_and_store(text)
     redirect_to root_path
   ensure
     # The bytes never outlive the request, whether it succeeded or failed (R3.5).
@@ -15,11 +15,33 @@ class DocumentsController < ApplicationController
   end
 
   private
-    def store_document(text)
+    # Exactly one Gemini call per upload: classification, field extraction and the
+    # plain-language summary all come back together (R5.1).
+    def analyze_and_store(text)
+      analysis = GeminiClient.new.analyze_document(text)
+
+      return discard_not_insurance unless analysis.insurance?
+
       session = current_insurance_session
       session.full_text = text
-      session.status = "uploaded"
+      session.document_type = analysis.document_type
+      session.structured_fields = analysis.structured_fields
+      session.plain_summary = analysis.plain_summary
+      session.status = "extracted"
       SessionCache.write(session)
+    end
+
+    # The document is thrown away rather than kept around unread, so a file we
+    # have no use for is not sitting in the cache for the next five minutes
+    # (R5.2). No further calls are made for it.
+    def discard_not_insurance
+      session = current_insurance_session
+      session.full_text = nil
+      session.plain_summary = nil
+      session.status = "error"
+      SessionCache.write(session)
+
+      raise ProcessingError::NotInsurance
     end
 
     # Rack cleans multipart tempfiles up at the end of the request anyway, but

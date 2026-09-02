@@ -3,13 +3,17 @@ require "test_helper"
 class DocumentUploadTest < ActionDispatch::IntegrationTest
   setup { Rails.cache.clear }
 
-  test "a valid insurance PDF is read and stored on the session" do
-    post document_path, params: { document: upload("insurance_sample.pdf") }
+  test "a valid insurance PDF is read, analysed and stored on the session" do
+    stub_gemini(gemini_analysis) do
+      post document_path, params: { document: upload("insurance_sample.pdf") }
+    end
 
     assert_redirected_to root_path
     session = SessionCache.find(session_id)
-    assert_equal "uploaded", session.status
+    assert_equal "extracted", session.status
     assert_includes session.full_text, "ACME HEALTH GOLD ADVANTAGE PLAN"
+    assert_equal "$1,500", session.field(:deductible)
+    assert_equal "Summary of Benefits", session.document_type
   end
 
   # AC 7
@@ -53,39 +57,49 @@ class DocumentUploadTest < ActionDispatch::IntegrationTest
   end
 
   # AC 10: the bytes must not outlive the request, on either path.
+  #
+  # Compares the set of multipart tempfiles rather than counting them: the temp
+  # directory is shared with the other parallel test processes, so a raw count
+  # moves for reasons that have nothing to do with this request.
   test "no uploaded file remains on disk after success or failure" do
     %w[insurance_sample.pdf actually_a_jpeg.pdf damaged.pdf].each do |fixture|
-      before = tempfile_count
+      before = multipart_tempfiles
 
-      post document_path, params: { document: upload(fixture) }
+      stub_gemini(gemini_analysis) do
+        post document_path, params: { document: upload(fixture) }
+      end
 
-      assert_equal before, tempfile_count,
-        "#{fixture} left a temporary file behind"
+      leaked = multipart_tempfiles - before
+      assert_empty leaked, "#{fixture} left #{leaked.length} temporary file(s) behind"
     end
   end
 
-# Regression: a visitor who already has a document and is refused a second one
-# must still get a file field. Without it the refusal is a dead end, which a
-# test starting from a fresh session never notices (R7.5).
-test "a refusal still offers a retry when a document is already held" do
-  post document_path, params: { document: upload("insurance_sample.pdf") }
-  assert_equal "uploaded", SessionCache.find(session_id).status
+  # Regression: a visitor who already has a document and is refused a second one
+  # must still get a file field. Without it the refusal is a dead end, which a
+  # test starting from a fresh session never notices (R7.5).
+  test "a refusal still offers a retry when a document is already held" do
+    stub_gemini(gemini_analysis) do
+      post document_path, params: { document: upload("insurance_sample.pdf") }
+    end
+    assert_equal "extracted", SessionCache.find(session_id).status
 
-  post document_path, params: { document: upload("actually_a_jpeg.pdf") }
+    post document_path, params: { document: upload("actually_a_jpeg.pdf") }
 
-  assert_response :unprocessable_entity
-  assert_select "[role=alert]", /only read PDF files/i
-  assert_select "input[type=file]", 1, "a refusal must never leave the visitor without a retry"
-end
+    assert_response :unprocessable_entity
+    assert_select "[role=alert]", /only read PDF files/i
+    assert_select "input[type=file]", 1, "a refusal must never leave the visitor without a retry"
+  end
 
   test "adding a second document replaces the first" do
-    post document_path, params: { document: upload("insurance_sample.pdf") }
-    first_length = SessionCache.find(session_id).full_text.length
+    stub_gemini(gemini_analysis, gemini_analysis) do
+      post document_path, params: { document: upload("insurance_sample.pdf") }
+      first_length = SessionCache.find(session_id).full_text.length
 
-    post document_path, params: { document: upload("insurance_sample.pdf") }
+      post document_path, params: { document: upload("insurance_sample.pdf") }
 
-    assert_equal first_length, SessionCache.find(session_id).full_text.length
-    assert_equal 1, cache_session_count, "a second document must not create a second session"
+      assert_equal first_length, SessionCache.find(session_id).full_text.length
+      assert_equal 1, cache_session_count, "a second document must not create a second session"
+    end
   end
 
   test "uploading refreshes the idle timer" do
@@ -93,7 +107,9 @@ end
     id = session_id
 
     travel(4.minutes) do
-      post document_path, params: { document: upload("insurance_sample.pdf") }
+      stub_gemini(gemini_analysis) do
+        post document_path, params: { document: upload("insurance_sample.pdf") }
+      end
     end
 
     travel(8.minutes) do
@@ -110,6 +126,10 @@ end
       Rails.cache.instance_variable_get(:@data).keys.count { |k| k.include?(SessionCache::KEY_PREFIX) }
     end
 
-    # Rack buffers multipart bodies into Dir.tmpdir; count what is left behind.
-    def tempfile_count = Dir.glob(File.join(Dir.tmpdir, "RackMultipart*")).length
+    # Rack names these RackMultipart<date>-<pid>-<random>. Scoped to this process
+    # because the temp directory is shared with the other parallel test workers,
+    # whose files come and go for reasons unrelated to this request.
+    def multipart_tempfiles
+      Dir.glob(File.join(Dir.tmpdir, "RackMultipart*-#{Process.pid}-*"))
+    end
 end

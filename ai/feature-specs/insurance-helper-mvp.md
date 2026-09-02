@@ -119,10 +119,12 @@ Confirmed by live calls:
   prose wrapper. This is how R5.1 should request its JSON — it largely removes the
   "model returned prose or a fenced block" failure mode rather than parsing around it.
 
-**Planning note (not yet decided):** thinking off is clearly right for Q&A turns, where
-questions are simple lookups and latency is felt by the user. Whether extraction (D-step
-C, a harder single call) benefits from a small thinking budget is worth one A/B during
-implementation rather than guessing now.
+**Settled during implementation (2026-09-02):** thinking stays **off for extraction
+too**. Measured against live calls with `thinkingBudget: 0`: the full synthetic
+Summary of Benefits returned all nine fields correctly, and a deliberately sparse
+document returned the one field it contained and `null` for the other eight rather
+than inventing plausible values. Accuracy did not need a thinking budget, so the
+cheaper setting stands for both call types.
 
 **D8 — API tier: free tier for the MVP.** Chosen deliberately after the tradeoff was
 raised twice. Google's free-tier terms permit using submitted content to improve their
