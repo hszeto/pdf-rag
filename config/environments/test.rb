@@ -20,7 +20,11 @@ Rails.application.configure do
 
   # Show full error reports.
   config.consider_all_requests_local = true
-  config.cache_store = :null_store
+  # Not :null_store — it silently discards writes, and this app keeps all session
+  # state in the cache. :memory_store keeps the suite free of an external Redis
+  # dependency, and parallel test workers are separate processes, so each gets its
+  # own isolated store.
+  config.cache_store = :memory_store
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable

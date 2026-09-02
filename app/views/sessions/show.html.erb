@@ -1,0 +1,9 @@
+<%# Which screen shows is driven by session status. Styling is deliberately
+    minimal here — the large-type, high-contrast pass is a later checkpoint. %>
+<div class="w-full">
+  <% if session_expired? %>
+    <%= render "removed_notice" %>
+  <% end %>
+
+  <%= render "landing" %>
+</div>
