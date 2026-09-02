@@ -1,0 +1,9 @@
+<%# Interim screen for this checkpoint: the document passed screening, but
+    storing and reading it arrives with the Document model. %>
+<h1 class="text-title font-bold mb-6">This document looks safe</h1>
+
+<p class="text-lead mb-8">We didn't find anything in it that tries to run on its own.</p>
+
+<%= render "documents/scan_notes", scan: @scan %>
+
+<p class="text-body text-ink-muted">Reading it comes next.</p>

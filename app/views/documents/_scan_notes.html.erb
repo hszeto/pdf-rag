@@ -1,0 +1,28 @@
+<%# D1 and D2: links and attachments never block a document, but they are not
+    hidden either. Every genuine document has links; the reader is the one who
+    can judge whether these look right. %>
+<% if scan.links.any? || scan.attachments.any? %>
+  <section class="border-2 border-rule rounded-lg p-5 mb-8">
+    <h2 class="text-lead font-bold mb-3">What's inside this document</h2>
+
+    <% if scan.attachments.any? %>
+      <p class="text-body mb-2">
+        It carries <%= pluralize(scan.attachments.length, "attached file") %>:
+        <%= scan.attachments.to_sentence %>.
+      </p>
+    <% end %>
+
+    <% if scan.links.any? %>
+      <p class="text-body mb-2">
+        It contains <%= pluralize(scan.links.length, "link") %> to other places:
+      </p>
+      <ul class="text-body list-disc pl-6">
+        <% scan.links.first(20).each do |link| %>
+          <%# Shown as text, never as a clickable link: this document came from
+              somewhere we do not trust yet. %>
+          <li class="break-all"><%= link %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+<% end %>

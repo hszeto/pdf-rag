@@ -64,6 +64,23 @@ class ProcessingError < StandardError
     def user_message = "Please add your insurance document first."
   end
 
+# Structural content that asks a PDF viewer to execute something. Carries which
+# signal caused the refusal, so support can answer "why was mine rejected"
+# (R2.2), and so the reader is told something specific rather than "no".
+class Unsafe < ProcessingError
+  attr_reader :signal
+
+  def initialize(signal)
+    @signal = signal
+    super("unsafe pdf: #{signal}")
+  end
+
+  def user_message
+    "This PDF contains #{PdfSafetyPolicy.label_for(signal)}, so we did not open it. " \
+    "Please try a different file."
+  end
+end
+
   class ServiceUnavailable < ProcessingError
     def user_message = "We are having trouble reading documents right now. Please try again in a moment."
   end
