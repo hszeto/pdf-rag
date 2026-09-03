@@ -22,8 +22,8 @@ services:
         fromDatabase:
           name: pdf-rag-db
           property: connectionString
-      # Cache uses this as given (DB 0); cable.yml appends /1 and the Sidekiq
-      # initializer appends /2.
+      # Cache and Action Cable use this URL as given; only the Sidekiq
+      # initializer rewrites the database number, to /2.
       - key: REDIS_URL
         fromService:
           type: keyvalue
