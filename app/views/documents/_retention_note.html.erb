@@ -11,12 +11,12 @@
     replaces with a live countdown. Without JavaScript it stands on its own and
     still states the promise (R3.5). The period comes from Document::RETENTION,
     so the promise and the behaviour cannot drift apart. %>
-<p class="text-body text-ink-muted">
+<p class="text-lead text-ink-muted text-center mt-10">
   <% if document %>
-    We remove this document, and everything we worked out from it,
+    This document and related data will be deleted
     <span data-retention-target="remaining"><%= Document::RETENTION.inspect %> after you added it</span>.
   <% else %>
-    We remove your document, and everything we work out from it,
+    Your document and everything we work out from it will be removed
     <%= Document::RETENTION.inspect %> after you add it.
   <% end %>
 </p>

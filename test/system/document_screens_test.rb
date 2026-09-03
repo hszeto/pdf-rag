@@ -58,6 +58,10 @@ class DocumentScreensTest < ApplicationSystemTestCase
 
     assert_text(/in \d+ minutes?/)
     assert_no_text(/\d{1,2}:\d{2}\s*(AM|PM)/i)
+
+    # The number pulses on its own; the words around it hold still.
+    assert_selector ".retention-pulse", text: /\A\d+\z/
+    assert_no_selector ".retention-pulse", text: /minute/
   end
 
   # D6 and R4.2: when the window closes the document leaves the screen without a
@@ -72,6 +76,60 @@ class DocumentScreensTest < ApplicationSystemTestCase
 
     assert_selector "h1", text: "This document has been removed", wait: 20
     assert_no_selector "h2", text: "Ask about this document"
+  end
+
+  # The strongest available proof that nothing navigated: a value set on `window`
+  # survives only if this document was never torn down and rebuilt.
+  test "asking a question appends the answer without reloading the page" do
+    document = ready_document
+    document.chunks.update_all(embedding: Array.new(GeminiClient::EMBEDDING_DIMENSIONS) { 0.01 })
+
+    stub_gemini(gemini_embeddings(1), gemini_answer(text: "Appended, not reloaded.", used: [ 1 ])) do
+      visit document_path(document)
+      page.execute_script("window.__notReloaded = true")
+
+      fill_in "question", with: "Does this reload?"
+      click_on "Ask"
+      assert_text "Appended, not reloaded.", wait: 10
+
+      assert page.evaluate_script("window.__notReloaded === true"),
+        "the page navigated — the answer should have been appended in place"
+      assert_equal "", find("#ask-form input[name=question]").value,
+        "the field should come back empty"
+    end
+  end
+
+  # The bug this guards: a #fragment redirect cannot survive Turbo's fetch, so
+  # the reader was dumped at the top of a long page after every question. Only a
+  # browser can see this — the redirect header looked correct the whole time.
+  test "asking a question leaves the reader at the new answer, not the top" do
+    # ready_document's chunks carry no embedding, so retrieval would find
+    # nothing and the question would be refused before an answer exists.
+    document = ready_document
+    document.chunks.update_all(embedding: Array.new(GeminiClient::EMBEDDING_DIMENSIONS) { 0.01 })
+    6.times do |i|
+      document.messages.create!(role: "user", content: "Older question #{i}? " * 8)
+      document.messages.create!(role: "assistant", content: "Older answer #{i}. " * 25)
+    end
+
+    stub_gemini(gemini_embeddings(1), gemini_answer(text: "The newest answer. " * 20, used: [ 1 ])) do
+      visit document_path(document)
+      fill_in "question", with: "My newest question?"
+      click_on "Ask"
+
+      assert_text "The newest answer.", wait: 10
+
+      # scrollIntoView animates, so poll until it settles rather than sampling
+      # the instant the text appears.
+      offset = 0
+      20.times do
+        offset = page.evaluate_script("window.scrollY")
+        break if offset > 0
+        sleep 0.15
+      end
+
+      assert_operator offset, :>, 0, "the reader was left at the top of the page"
+    end
   end
 
   test "the page does not scroll sideways on a narrow screen" do

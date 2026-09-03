@@ -12,26 +12,32 @@
 
     <h1 class="text-title font-bold mb-4"><%= @document.title %></h1>
 
+    <%# What the document is, then what is inside it, then the conversation:
+        description before contents before questions.
+
+        Scan notes sit outside the branch because links and attachments are known
+        from screening, before a word has been extracted — a reader waiting for a
+        long document can already see what it carries. %>
     <% if @document.processing? %>
       <%= render "documents/processing", document: @document %>
     <% elsif @document.failed? %>
       <%= render "documents/error", message: @document.failure_reason %>
-    <% else %>
-      <% if @document.summary.present? %>
-        <section class="mb-10">
-          <h2 class="text-lead font-bold mb-3">What this document is</h2>
-          <ul class="text-body list-disc pl-6 space-y-2">
-            <% @document.summary.split("\n").each do |point| %>
-              <li><%= point %></li>
-            <% end %>
-          </ul>
-        </section>
-      <% end %>
-
-      <%= render "documents/chat", document: @document %>
+    <% elsif @document.summary.present? %>
+      <section class="bg-highlight-bg rounded-2xl p-5 sm:p-6 mb-8">
+        <h2 class="text-lead font-bold mb-3">What this document is</h2>
+        <ul class="text-body list-disc pl-6 space-y-2">
+          <% @document.summary.split("\n").each do |point| %>
+            <li><%= point %></li>
+          <% end %>
+        </ul>
+      </section>
     <% end %>
 
     <%= render "documents/scan_notes", document: @document %>
+
+    <% if @document.ready? %>
+      <%= render "documents/chat", document: @document %>
+    <% end %>
 
     <%= render "documents/retention_note", document: @document %>
   </div>

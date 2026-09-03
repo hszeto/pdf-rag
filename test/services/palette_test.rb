@@ -14,7 +14,13 @@ class PaletteTest < ActiveSupport::TestCase
     [ "button label on accent",   :"accent-ink", :accent,  4.5 ],
     [ "notice text on notice bg", :"notice-ink", :"notice-bg", 4.5 ],
     [ "alert text on alert bg",   :"alert-ink", :"alert-bg",   4.5 ],
-    [ "rule on paper",            :rule,       :paper,     3.0 ]
+    [ "rule on paper",            :rule,       :paper,     3.0 ],
+    [ "body text on panel",       :ink,        :panel,     4.5 ],
+    [ "muted text on panel",      :"ink-muted", :panel,    4.5 ],
+    [ "rule on panel",            :rule,       :panel,     3.0 ],
+    [ "body text on highlight",   :ink,        :"highlight-bg", 4.5 ],
+    [ "muted text on highlight",  :"ink-muted", :"highlight-bg", 4.5 ],
+    [ "rule on highlight",        :rule,       :"highlight-bg", 3.0 ]
   ].freeze
 
   PAIRS.each do |label, fg, bg, minimum|

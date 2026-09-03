@@ -40,10 +40,30 @@ export default class extends Controller {
     if (!this.hasRemainingTarget) return
 
     const minutes = Math.floor(left / 60000)
-    this.remainingTarget.textContent =
-      minutes >= 1
-        ? `in ${minutes} ${minutes === 1 ? "minute" : "minutes"}`
-        : "in less than a minute"
+
+    if (minutes < 1) {
+      this.number = null
+      this.remainingTarget.textContent = "in less than a minute"
+      return
+    }
+
+    // The number lives in its own element so it alone can pulse, and that
+    // element is built once rather than every tick: replacing the node each
+    // second would restart the CSS animation, so it would never finish a single
+    // cycle. Caching the node is not the same as counting in it — the value
+    // still comes from expiresAt on every render, so a teardown loses nothing.
+    if (!this.number || !this.remainingTarget.contains(this.number)) {
+      this.number = document.createElement("span")
+      this.number.className = "retention-pulse font-bold"
+      this.remainingTarget.replaceChildren(
+        document.createTextNode("in "),
+        this.number,
+        document.createTextNode(" minutes")
+      )
+    }
+
+    this.number.textContent = String(minutes)
+    this.remainingTarget.lastChild.textContent = minutes === 1 ? " minute" : " minutes"
   }
 
   // The document is unreachable from this instant, so the page stops showing it
