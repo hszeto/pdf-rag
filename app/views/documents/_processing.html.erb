@@ -1,0 +1,36 @@
+<%# The reader is waiting, so show something moving and say something calm.
+
+    started-at comes from the server because polling replaces this whole page
+    every few seconds, tearing the Stimulus controller down and building it
+    again. Anything the controller remembers resets that often, so elapsed time
+    has to come from outside it. %>
+<div data-controller="processing"
+     data-processing-interval-value="3000"
+     data-processing-slow-after-value="30000"
+     data-processing-started-at-value="<%= document.created_at.to_i %>">
+
+  <div class="flex items-center gap-4 mb-6">
+    <%# Decorative: the live region below carries the status, so a screen reader
+        should not announce this. Held still for readers who ask for reduced
+        motion. %>
+    <span class="inline-block h-8 w-8 shrink-0 rounded-full border-4 border-rule border-t-accent motion-safe:animate-spin"
+          aria-hidden="true"></span>
+    <h2 class="text-lead font-bold">Reading your document</h2>
+  </div>
+
+  <p class="text-body mb-4" data-processing-target="message" aria-live="polite">
+    Reading your document…
+  </p>
+
+  <p class="text-body text-ink-muted mb-8">
+    <%= pluralize(document.chunks.count, "passage") %> found so far.
+  </p>
+
+  <p class="text-body text-ink-muted hidden" data-processing-target="slow" aria-live="polite">
+    A long document takes a little while. We're still working on it.
+  </p>
+
+  <noscript>
+    <p class="text-body"><%= link_to "Check if it is ready", document_path(document), class: "text-accent" %></p>
+  </noscript>
+</div>

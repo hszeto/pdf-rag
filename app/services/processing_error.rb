@@ -88,4 +88,13 @@ end
   class ServiceUnavailable < ProcessingError
     def user_message = "We are having trouble reading documents right now. Please try again in a moment."
   end
+
+  # A daily cap, as opposed to a passing rate limit. Telling someone to try again
+  # in a moment is untrue when the budget does not reset until tomorrow, and
+  # sends them back to retry something that cannot work.
+  class QuotaExhausted < ServiceUnavailable
+    def user_message
+      "We have reached today's limit for reading documents. Please try again tomorrow."
+    end
+  end
 end

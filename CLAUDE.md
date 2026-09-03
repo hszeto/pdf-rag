@@ -2,36 +2,90 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project state
+## What this is
 
-Rails 8.1 app (`InsuranceHelper`), Ruby 4.0.6, generated but not yet built out: no commits on `main`, no models, no routes beyond `/up`, no root route. Everything under `app/` is still generator default except that `pdf-reader` has been added to the Gemfile — PDF parsing is the intended feature direction.
+`PdfRag` — upload a PDF, have it screened for hostile content, chunked and embedded
+into Postgres, then ask questions answered from the passages that matter rather than
+from the whole document. Documents are kept for **one hour**, then removed.
+
+The `mvp` branch holds a superseded insurance-specific version of this app. It is a
+working reference, not dead code — several services here came from it unchanged.
 
 ## Commands
 
 ```bash
 bin/setup              # install deps, clear logs/tmp, then exec bin/dev
-bin/setup --skip-server
-bin/dev                # foreman: `bin/rails server` + `bin/rails tailwindcss:watch` (PORT env, default 3000)
+bin/dev                # foreman: server + tailwind watch + sidekiq worker
 
-bin/ci                 # full pipeline: setup, rubocop, bundler-audit, importmap audit, brakeman, tests
-bin/rubocop            # rubocop-rails-omakase style
-bin/brakeman --quiet --no-pager
-bin/bundler-audit
-bin/importmap audit
-
-bin/rails test                                    # all non-system tests
-bin/rails test test/models/foo_test.rb            # one file
-bin/rails test test/models/foo_test.rb:42         # one test by line
-bin/rails test:system                             # Capybara + Selenium (not in bin/ci; is in GitHub CI)
+bin/ci                 # setup, rubocop, bundler-audit, importmap audit, brakeman, tests
+bin/rubocop
+bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error
+bin/rails test                        # all non-system tests
+bin/rails test:system                 # Chrome; NOT in bin/ci
+bin/rails retention:sweep             # remove expired documents and orphaned files
 ```
 
-Tests run in parallel with `:number_of_processors` workers (`test/test_helper.rb`) — anything sharing global state across tests needs care.
+## Prerequisites
 
-## Architecture notes
+- **PostgreSQL 14** with **pgvector**. Homebrew's `pgvector` bottle only ships for
+  postgresql@17/@18; on pg14 it must be built from source against `pg_config`. The
+  extension is enabled by a migration, so a fresh `db:migrate` sets it up.
+- **Redis** — cache on DB 0, Action Cable DB 1, Sidekiq DB 2. `brew services start redis`.
+- **`gemini_api_key` in Rails encrypted credentials.** Models: `gemini-2.5-flash` for
+  generation, `gemini-embedding-001` (3072 dimensions) for vectors.
 
-- **No database.** `active_record/railtie`, Active Storage, Action Mailbox, and Action Text are all commented out in `config/application.rb`, and no DB adapter gem is in the Gemfile. Anything touching persistence requires re-enabling the railtie and adding an adapter first; until then, use Active Model (`active_model/railtie` is on) for form/value objects.
-- **Asset pipeline:** Propshaft + importmap-rails (no bundler/node). Add JS deps via `bin/importmap pin`, not npm. Stimulus controllers in `app/javascript/controllers/` are auto-registered by `pin_all_from`.
-- **CSS:** tailwindcss-rails compiles `app/assets/tailwind/application.css` → `app/assets/builds/tailwind.css` (a build artifact). `bin/dev` watches it; otherwise `bin/rails tailwindcss:build`.
-- **`ApplicationController`** sets `allow_browser versions: :modern` — legacy browsers get a 406, which can surprise in tests or manual checks.
-- **`config.autoload_lib(ignore: %w[assets tasks])`** — `lib/` is autoloaded and eager-loaded; new `lib/` code must follow Zeitwerk naming.
-- **Deploy:** Kamal (`config/deploy.yml`) is still at placeholder values (`192.168.0.1`, `localhost:5555` registry) — not deployable as configured.
+## Architecture
+
+**The pipeline.** Upload → validate → **screen** → store → ingest → embed → summarise.
+Screening runs *on the request*, before Active Storage stores anything, because a
+refused document must never be written anywhere. It costs ~2s on a 140-page file,
+almost entirely PDF parsing. Everything after that is Sidekiq.
+
+**Nothing sends the document to the model.** A generic-anchor query retrieves the
+passages that describe a document, and questions retrieve the three nearest passages.
+Measured on a 140-page policy: summarising sent 1.7% of it, in two API calls. There is
+deliberately **no full-text fallback** — if the retrieved passages do not answer a
+question, saying so is the answer.
+
+**Batching is by token budget, not item count** (`EmbeddingBatches`). The API caps a
+request at 100 items, but the free tier rejects on a per-minute token budget long
+before that. Batching by count builds requests it refuses every time.
+
+**Retention is a column, not a job.** `Document.live` scopes every read to
+`expires_at`, so a document past its hour is unreachable whether or not anything has
+deleted it. `DeleteDocumentJob` and the sweep only free bytes. Purging is synchronous —
+Active Storage's `purge_later` would leave the file on disk if that second job were lost.
+
+**Safety is policy, not detection.** `PdfSafetyScanner` finds signals;
+`PdfSafetyPolicy` decides what they mean, in one enumerable table. Scripts, launch
+actions and attached programs are blocked; links and ordinary attachments are shown to
+the reader. A real insurance policy carries a provenance attachment and ten legitimate
+links — blocking on either would reject the most representative document available.
+
+## Things that will bite
+
+- **No mocking library.** Minitest 6 dropped `Minitest::Mock`; there is no webmock. Every
+  external seam is injected. `test_helper.rb` makes any unstubbed Gemini call raise, so a
+  forgotten stub fails loudly instead of making a real billed call.
+- **PDF actions hide in three places.** An `OpenAction` on the Catalog is a *direct*
+  dictionary that `each_object` never yields, and annotation actions hang off each page.
+  A scanner that walks only indirect objects finds nothing and accepts everything.
+- **Stimulus controller state does not survive polling.** The processing screen replaces
+  the page every few seconds, so elapsed time comes from a server-supplied timestamp.
+  Anything held in `connect()` resets before it can fire.
+- **`allow_browser versions: :modern`** returns 406 to older browsers.
+- **Brakeman runs with `--exit-on-warn`** — any warning fails `bin/ci`.
+- **Tests run in parallel** with per-worker databases. They must not depend on
+  macOS-only tools; CI is ubuntu.
+- **The Gemini free tier's daily cap** is exhausted by embedding roughly one large
+  document. This blocked verification repeatedly during development.
+
+## Layout
+
+```
+app/services/     pdf_safety_{scanner,policy}, pdf_extraction_service, text_chunker,
+                  embedding_batches, chunk_retriever, document_summarizer,
+                  question_answerer, gemini_client, processing_error
+app/jobs/         ingest → embed_chunk_batch → summarize; delete + sweep for retention
+app/models/       document, document_chunk, message
+```

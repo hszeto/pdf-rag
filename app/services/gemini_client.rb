@@ -143,9 +143,16 @@ class GeminiClient
         "message=#{detail&.dig('message').to_s.truncate(200).inspect}"
       )
 
-      ProcessingError::ServiceUnavailable.new(
-        [ "http #{response.status}", quota, retry_after ].compact.join(" ")
-      )
+      detail = [ "http #{response.status}", quota, retry_after ].compact.join(" ")
+
+      # Google names the quota that was hit. A per-day cap and a per-minute burst
+      # limit are both 429s, but only one of them is worth retrying, and only one
+      # should be described to a reader as momentary.
+      if quota.to_s.match?(/PerDay/i)
+        ProcessingError::QuotaExhausted.new(detail)
+      else
+        ProcessingError::ServiceUnavailable.new(detail)
+      end
     end
 
     def parse_error_body(body)

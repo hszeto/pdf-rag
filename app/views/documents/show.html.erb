@@ -7,10 +7,7 @@
 <h1 class="text-title font-bold mb-4"><%= @document.title %></h1>
 
 <% if @document.processing? %>
-  <p class="text-lead mb-8">Reading your document…</p>
-  <p class="text-body text-ink-muted mb-8">
-    <%= pluralize(@document.chunks.count, "passage") %> found so far.
-  </p>
+  <%= render "documents/processing", document: @document %>
 <% elsif @document.failed? %>
   <%= render "documents/error", message: @document.failure_reason %>
 <% else %>
