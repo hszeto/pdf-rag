@@ -22,9 +22,12 @@
     Reading your document…
   </p>
 
-  <p class="text-body text-ink-muted mb-8">
-    <%= pluralize(document.chunks.count, "passage") %> found so far.
-  </p>
+  <%# Shown only once both numbers are real; see Document#page_count. %>
+  <% if document.pages_read && document.page_count %>
+    <p class="text-body text-ink-muted mb-8">
+      Reading page <%= document.pages_read %> of <%= document.page_count %>.
+    </p>
+  <% end %>
 
   <p class="text-body text-ink-muted hidden" data-processing-target="slow" aria-live="polite">
     A long document takes a little while. We're still working on it.

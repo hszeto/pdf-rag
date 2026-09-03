@@ -45,6 +45,21 @@ has_one_attached :file
 
   def chunks_awaiting_embedding = chunks.where(embedding: nil)
 
+  # How far reading has got, told in pages because that is a property of the
+  # reader's document rather than of how we cut it up (R1.4).
+  #
+  # Both are nil until the number is real, and the screen shows nothing until
+  # both are: during `extracting` no chunks exist, and between the rows being
+  # written and the first batch returning nothing is embedded yet. That one
+  # rule also covers chunks carrying no page at all, which would otherwise
+  # render "page  of ".
+  #
+  # The total is the last page that produced text, so a document ending in
+  # blank or image-only pages reports fewer pages than the PDF holds. That is
+  # honest about what was read, which is all the line claims.
+  def page_count = chunks.maximum(:page)
+  def pages_read = chunks.embedded.maximum(:page)
+
   private
     def set_expiry
       self.expires_at ||= RETENTION.from_now

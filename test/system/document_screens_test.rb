@@ -21,7 +21,7 @@ class DocumentScreensTest < ApplicationSystemTestCase
     assert_empty too_small, "these fall below 18px: #{too_small.inspect}"
   end
 
-  test "a ready document shows its summary, its passages and a way to ask" do
+  test "a ready document shows its summary and a way to ask" do
     document = ready_document
     visit document_path(document)
 

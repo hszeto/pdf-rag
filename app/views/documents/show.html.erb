@@ -22,10 +22,6 @@
     </section>
   <% end %>
 
-  <p class="text-body text-ink-muted mb-8">
-    <%= pluralize(@document.chunks.count, "passage") %> ready to search.
-  </p>
-
   <%= render "documents/chat", document: @document %>
 <% end %>
 
