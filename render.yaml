@@ -1,8 +1,11 @@
 # Render Blueprint. Deploy with: New → Blueprint, pointed at this repository.
 #
 # One web service runs both Puma and Sidekiq (see bin/render-start for why),
-# alongside a Postgres instance for pgvector and a Key Value instance for the
-# cache, Action Cable and the Sidekiq queue.
+# plus a Key Value instance for the cache, Action Cable and the Sidekiq queue.
+#
+# Postgres is NOT created here. It references `general-postgres-db`, which must
+# already exist in the workspace — a blueprint may point at a database it does
+# not define, and Render allows only one free Postgres per workspace anyway.
 
 services:
   - type: web
@@ -18,9 +21,13 @@ services:
       # sync: false means Render prompts for it instead of storing it here.
       - key: RAILS_MASTER_KEY
         sync: false
+      # The shared Postgres, not one this blueprint creates. Every table this
+      # app owns lands in the `pdfrag` schema (schema_search_path in
+      # database.yml, which a URL without one does not override), so it can sit
+      # beside other applications in the same database without collision.
       - key: DATABASE_URL
         fromDatabase:
-          name: pdf-rag-db
+          name: general-postgres-db
           property: connectionString
       # Cache and Action Cable use this URL as given; only the Sidekiq
       # initializer rewrites the database number, to /2.
@@ -64,18 +71,10 @@ services:
   #       sync: false
   #     - key: DATABASE_URL
   #       fromDatabase:
-  #         name: pdf-rag-db
+  #         name: general-postgres-db
   #         property: connectionString
   #     - key: REDIS_URL
   #       fromService:
   #         type: keyvalue
   #         name: pdf-rag-kv
   #         property: connectionString
-
-databases:
-  - name: pdf-rag-db
-    plan: free
-    region: oregon
-    postgresMajorVersion: "17"
-    databaseName: pdf_rag_production
-    user: pdf_rag
