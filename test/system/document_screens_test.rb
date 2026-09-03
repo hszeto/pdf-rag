@@ -7,9 +7,14 @@ class DocumentScreensTest < ApplicationSystemTestCase
   test "the upload screen is readable and says how long documents are kept" do
     visit root_path
 
-    assert_selector "h1", text: "Understand any document"
+    assert_selector "h1", text: "Understand any PDF document"
     assert_text(/#{Document::RETENTION.inspect} after you add it/i)
-    assert_selector "input[type=file]"
+    # visible: :all because the enhanced field's input is transparent by design —
+    # opacity-0 is what preserves the browser's own `required` check, and
+    # Capybara counts that as invisible. It is still present and still the thing
+    # that opens the picker; the pill around it is what the reader sees.
+    assert_selector "input[type=file]", visible: :all
+    assert page.has_selector?("[data-enhanced]"), "the field should be enhanced into a pill"
 
     too_small = page.evaluate_script(<<~JS)
       Array.from(document.querySelectorAll('main *'))
@@ -132,6 +137,46 @@ class DocumentScreensTest < ApplicationSystemTestCase
 
       assert_operator offset, :>, 0, "the reader was left at the top of the page"
     end
+  end
+
+  # D3: the native control is replaced, so the field has to say what was chosen
+  # itself. attach_file needs make_visible because the real input is transparent.
+  test "choosing a file shows its name in the field" do
+    visit root_path
+
+    assert_text "Choose a PDF"
+
+    attach_file "document", file_fixture("restaurant_menu.pdf"), make_visible: true
+
+    assert_text "restaurant_menu.pdf"
+    assert_no_text "Choose a PDF"
+  end
+
+  # D1 and R1.2: inside the field's bounds, not below it, and clear of the name.
+  test "the upload button sits inside the field" do
+    visit root_path
+
+    inside = page.evaluate_script(<<~JS)
+      (() => {
+        const pill = document.querySelector('[data-enhanced]')
+        const button = pill.querySelector('input[type=submit]')
+        const p = pill.getBoundingClientRect(), b = button.getBoundingClientRect()
+        return b.top >= p.top && b.bottom <= p.bottom && b.right <= p.right
+      })()
+    JS
+    assert inside, "the Submit button should render within the field's bounds"
+  end
+
+  # R2.3: opacity hides the input's own ring, so the pill has to draw one.
+  test "the upload field shows a focus ring when the input has focus" do
+    visit root_path
+
+    page.execute_script("document.querySelector('input[type=file]').focus()")
+    width = page.evaluate_script(<<~JS)
+      getComputedStyle(document.querySelector('[data-enhanced]')).outlineWidth
+    JS
+
+    assert_equal "3px", width, "the pill should carry the focus ring"
   end
 
   test "the page does not scroll sideways on a narrow screen" do

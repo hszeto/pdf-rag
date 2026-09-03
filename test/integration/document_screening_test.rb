@@ -36,6 +36,18 @@ class DocumentScreeningTest < ActionDispatch::IntegrationTest
     assert Document.last.file.attached?
   end
 
+  # R4: the pill is applied by JavaScript, never rendered. What the server sends
+  # is the browser's own control, which works and shows its filename without any
+  # JavaScript at all. `data-enhanced` is only ever set in a browser, so its
+  # absence here is the guarantee rather than a proxy for one.
+  test "the upload form is served unenhanced, so it works without javascript" do
+    get root_path
+
+    assert_select "input[type=file]", 1
+    assert_select "[data-enhanced]", 0, "the server must not pre-apply the enhancement"
+    assert_select "[data-controller=upload]", 1, "but it must offer it"
+  end
+
   # D1: never hidden, never blocking.
   test "the links found are shown to the reader" do
     post_pdf HostilePdfs.benign_document_pdf
