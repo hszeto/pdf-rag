@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // .tool_input.notebook_path // empty'); b=$(git -C \"$(dirname \"${f:-.}\")\" branch --show-current 2>/dev/null); { [ \"$b\" = \"main\" ] || [ \"$b\" = \"master\" ]; } && jq -nc --arg b \"$b\" --arg msg 'You are editing a file on the default branch. This project lands work through pull requests, and main auto-deploys to Render. Stop and ask the user whether to create a branch before continuing.' '{hookSpecificOutput:{hookEventName:\"PreToolUse\",additionalContext:$msg},systemMessage:(\"Editing on \\($b) - consider branching first.\")}'; exit 0",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

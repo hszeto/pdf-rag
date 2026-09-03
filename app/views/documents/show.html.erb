@@ -1,34 +1,60 @@
-<%# Interim view for this checkpoint: the document is stored and being read.
-    The summary and chat arrive with retrieval. %>
-<% if flash[:alert].present? %>
-  <%= render "documents/error", message: flash[:alert] %>
-<% end %>
+<%# The whole document sits inside the retention controller so that when the
+    countdown reaches zero the content can be taken off the screen in place
+    (D6). The replacement below ships with this response, so the swap needs no
+    request — see retention_controller.js. %>
+<div data-controller="retention"
+     data-retention-expires-at-value="<%= @document.expires_at.to_i %>">
 
-<h1 class="text-title font-bold mb-4"><%= @document.title %></h1>
+  <div data-retention-target="live">
+    <% if flash[:alert].present? %>
+      <%= render "documents/error", message: flash[:alert] %>
+    <% end %>
 
-<% if @document.processing? %>
-  <%= render "documents/processing", document: @document %>
-<% elsif @document.failed? %>
-  <%= render "documents/error", message: @document.failure_reason %>
-<% else %>
-  <% if @document.summary.present? %>
-    <section class="mb-10">
-      <h2 class="text-lead font-bold mb-3">What this document is</h2>
-      <ul class="text-body list-disc pl-6 space-y-2">
-        <% @document.summary.split("\n").each do |point| %>
-          <li><%= point %></li>
-        <% end %>
-      </ul>
-    </section>
-  <% end %>
+    <h1 class="text-title font-bold mb-4"><%= @document.title %></h1>
 
-  <p class="text-body text-ink-muted mb-8">
-    <%= pluralize(@document.chunks.count, "passage") %> ready to search.
-  </p>
+    <%# What the document is, then what is inside it, then the conversation:
+        description before contents before questions.
 
-  <%= render "documents/chat", document: @document %>
-<% end %>
+        Scan notes sit outside the branch because links and attachments are known
+        from screening, before a word has been extracted — a reader waiting for a
+        long document can already see what it carries. %>
+    <% if @document.processing? %>
+      <%= render "documents/processing", document: @document %>
+    <% elsif @document.failed? %>
+      <%= render "documents/error", message: @document.failure_reason %>
+    <% elsif @document.summary.present? %>
+      <section class="bg-highlight-bg rounded-2xl p-5 sm:p-6 mb-8">
+        <h2 class="text-lead font-bold mb-3">What this document is</h2>
+        <ul class="text-body list-disc pl-6 space-y-2">
+          <% @document.summary.split("\n").each do |point| %>
+            <li><%= point %></li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
 
-<%= render "documents/scan_notes", document: @document %>
+    <%= render "documents/scan_notes", document: @document %>
 
-<%= render "documents/retention_note", document: @document %>
+    <% if @document.ready? %>
+      <%= render "documents/chat", document: @document %>
+    <% end %>
+
+    <%= render "documents/retention_note", document: @document %>
+  </div>
+
+  <%# Hidden until the countdown runs out. A direct visit to an already-expired
+      document never reaches this — DocumentsController redirects that to the
+      upload screen, which is deliberately unchanged (R4.3). %>
+  <div data-retention-target="expired" class="hidden">
+    <h1 class="text-title font-bold mb-4">This document has been removed</h1>
+
+    <p class="text-lead mb-8">
+      We kept it for <%= Document::RETENTION.inspect %>, as promised, and have now
+      removed it along with everything we worked out from it.
+    </p>
+
+    <p class="text-body">
+      <%= link_to "Add another document", root_path, class: "text-accent" %>
+    </p>
+  </div>
+</div>

@@ -82,12 +82,17 @@ end
     def user_message = "We are having trouble reading documents right now. Please try again in a moment."
   end
 
-  # A daily cap, as opposed to a passing rate limit. Telling someone to try again
-  # in a moment is untrue when the budget does not reset until tomorrow, and
-  # sends them back to retry something that cannot work.
+  # A daily cap, as opposed to the passing failure its parent covers. The budget
+  # does not reset until tomorrow, so this stays a separate class: the two are
+  # worth telling apart in logs even where the copy is deliberately close.
+  #
+  # The wording says neither "limit" nor "tomorrow" by choice. Why we cannot
+  # answer is our problem rather than the reader's, and naming the day makes a
+  # promise about when service returns that is better left unmade. A reader who
+  # retries too soon simply sees this again.
   class QuotaExhausted < ServiceUnavailable
     def user_message
-      "We have reached today's limit for reading documents. Please try again tomorrow."
+      "We are busier than usual today. Please try again later."
     end
   end
 end

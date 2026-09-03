@@ -6,12 +6,44 @@ class AskingQuestionsTest < ActionDispatch::IntegrationTest
   test "asking a question shows the exchange on the document page" do
     ask "What is the deductible?", answer: "It is $1,500 a year."
 
-    assert_select "li", /You asked/
+    assert_select "li", /User/
     assert_includes response.body, "What is the deductible?"
     assert_includes response.body, "It is $1,500 a year."
   end
 
   # AC 16
+  # D4 and D5: the reader's words on the right, the answer on the left, each
+  # named in text so the distinction is not carried by position alone (R2.6).
+  test "the question sits right and the answer sits left, each named" do
+    ask "What is the deductible?", answer: "It is $1,500 a year."
+
+    assert_select "li.justify-end", /User/
+    assert_select "li.justify-start", /AI/
+  end
+
+  test "no avatars and no timestamps appear in the exchange" do
+    ask "What is the deductible?", answer: "It is $1,500 a year."
+
+    assert_select "li img", count: 0
+    assert_select "li time", count: 0
+  end
+
+  # R2.3: a growing page should not send the reader back to the top.
+  test "asking lands the reader on the answer" do
+    ask "What is the deductible?", answer: "It is $1,500 a year."
+
+    newest = @document.messages.ordered.last
+    assert_equal "assistant", newest.role
+    assert_select "li##{ActionView::RecordIdentifier.dom_id(newest)}"
+  end
+
+  test "a document with no questions yet invites one" do
+    get document_path(@document)
+
+    assert_select "p", /No questions yet/
+    assert_select "label", /Type your question/
+  end
+
   test "an answer shows where in the document it came from" do
     ask "What is the deductible?", answer: "It is $1,500.", used: [ 1, 2 ]
 
@@ -90,7 +122,55 @@ class AskingQuestionsTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
+  # The browser asks for a stream, so the answer is appended to the page the
+  # reader is already looking at rather than replacing it.
+  test "the answer arrives as a stream that appends, not a redirect" do
+    stream "What is the deductible?", answer: "It is $1,500."
+
+    assert_response :success
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_match(/action="append" target="messages"/, response.body)
+    assert_match(/It is \$1,500\./, response.body)
+  end
+
+  test "the stream carries both turns of the exchange" do
+    stream "What is the deductible?", answer: "It is $1,500."
+
+    assert_equal 2, response.body.scan(/action="append" target="messages"/).length
+    assert_match(/What is the deductible\?/, response.body)
+  end
+
+  # Replacing the form is what clears the question that was just asked.
+  test "the stream replaces the form so the field comes back empty" do
+    stream "What is the deductible?", answer: "It is $1,500."
+
+    assert_match(/action="replace" target="ask-form"/, response.body)
+  end
+
+  # The empty-state line has to go the moment there is something to show.
+  test "the stream removes the no-questions notice" do
+    stream "First question?", answer: "First answer."
+
+    assert_match(/action="remove" target="no-questions"/, response.body)
+  end
+
+  test "a failed question still answers with a page rather than a stream" do
+    stub_gemini(gemini_embeddings(1), [ 503, "down" ]) do
+      post document_messages_path(@document), params: { question: "Second?" }, as: :turbo_stream
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "text/html", response.media_type
+    assert_select "[role=alert]", /trouble reading documents/i
+  end
+
   private
+    def stream(question, answer:, found: true, used: [ 1 ])
+      stub_gemini(gemini_embeddings(1), gemini_answer(text: answer, found: found, used: used)) do
+        post document_messages_path(@document), params: { question: question }, as: :turbo_stream
+      end
+    end
+
     def ask(question, answer:, found: true, used: [ 1 ])
       stub_gemini(gemini_embeddings(1), gemini_answer(text: answer, found: found, used: used)) do
         post document_messages_path(@document), params: { question: question }

@@ -1,0 +1,29 @@
+<%# One turn of the exchange. Rendered both by the full page and by the Turbo
+    Stream that appends a new answer, so the two can never drift apart.
+
+    `reveal` marks the message worth scrolling to. On the streamed path it is
+    passed directly; on the no-JavaScript path the controller supplies it as
+    ?asked=, because a #fragment cannot survive Turbo's redirect handling. %>
+<li id="<%= dom_id(message) %>"
+    <%= "data-controller=reveal" if local_assigns[:reveal] || params[:asked].to_s == message.id.to_s %>
+    class="flex <%= message.asked? ? "justify-end" : "justify-start" %>">
+  <div class="max-w-[85%] sm:max-w-[75%]">
+    <p class="text-body text-ink-muted mb-1 <%= "text-right" if message.asked? %>">
+      <%= message.asked? ? "User" : "AI" %>
+    </p>
+
+    <%# Both colour pairs are already asserted for contrast in PaletteTest;
+        wrap-break-word keeps a long unbroken string from widening the page,
+        which the no-sideways-scroll test guards. %>
+    <div class="rounded-2xl p-5 text-lead wrap-break-word <%=
+          message.asked? ? "bg-notice-bg text-notice-ink rounded-br-sm" : "bg-paper border-2 border-rule rounded-bl-sm" %>">
+      <%= message.content %>
+    </div>
+
+    <% if message.answered? && message.citations.any? %>
+      <p class="text-body text-ink-muted mt-2">
+        From <%= message.citations.to_sentence %> of your document.
+      </p>
+    <% end %>
+  </div>
+</li>

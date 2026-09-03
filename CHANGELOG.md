@@ -2,6 +2,31 @@
 
 Notable changes to this project.
 
+## [0.2.0] - 2026-09-03
+
+### Changed
+
+- **Documents are now kept for thirty minutes**, not an hour. The period lives in
+  `Document::RETENTION` and the reader-facing copy derives from it, so the promise and
+  the behaviour cannot drift apart.
+- **The retention note counts down** in whole minutes instead of naming a time. It named
+  a time in the server's zone, which is nobody's local time: a reader in Los Angeles at
+  09:45 was told the document would go at "5:40 PM". A duration is correct everywhere.
+  Under a minute it says so in words. Without JavaScript the sentence still states the
+  promise and shows no clock.
+- **A document leaves the screen when its window closes**, replaced in place by the
+  removal message. The replacement ships with the page, so the swap costs no request and
+  holds even if the server is asleep. A direct visit to an expired document still
+  redirects to the upload screen, unchanged.
+- **Questions and answers read as a conversation** — the reader's words on the right, the
+  answer on the left, each named in text as "User" or "AI". No avatars and no timestamps;
+  a per-message time would reintroduce the same timezone defect the countdown removes.
+  Asking now lands on the new answer rather than the top of the page.
+- **Progress is reported in pages, not passages.** How a document was chunked is an
+  implementation detail; a page belongs to the reader's document. The waiting screen reads
+  "Reading page 40 of 138" once both numbers are real, and the ready screen no longer
+  counts anything at all.
+
 ## [0.1.1] - 2026-09-03
 
 ### Changed

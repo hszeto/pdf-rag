@@ -21,7 +21,7 @@ class DocumentScreensTest < ApplicationSystemTestCase
     assert_empty too_small, "these fall below 18px: #{too_small.inspect}"
   end
 
-  test "a ready document shows its summary, its passages and a way to ask" do
+  test "a ready document shows its summary and a way to ask" do
     document = ready_document
     visit document_path(document)
 
@@ -51,6 +51,89 @@ class DocumentScreensTest < ApplicationSystemTestCase
     assert_no_selector "a[href='http://example.gov/']"
   end
 
+  # D1: minutes, never seconds. A second-by-second counter reads as pressure,
+  # and the note is here to be honest about the limit, not to hurry anyone.
+  test "the retention note counts down in minutes and shows no clock time" do
+    visit document_path(ready_document)
+
+    assert_text(/in \d+ minutes?/)
+    assert_no_text(/\d{1,2}:\d{2}\s*(AM|PM)/i)
+
+    # The number pulses on its own; the words around it hold still.
+    assert_selector ".retention-pulse", text: /\A\d+\z/
+    assert_no_selector ".retention-pulse", text: /minute/
+  end
+
+  # D6 and R4.2: when the window closes the document leaves the screen without a
+  # request. The replacement arrived with the page, so this holds even if the
+  # server has gone to sleep in the meantime.
+  test "the document is replaced in place when the countdown runs out" do
+    document = ready_document
+    # Long enough that a slow runner cannot expire it mid-load — at which point
+    # the server would redirect instead, and the swap would never be reached.
+    document.update!(expires_at: 15.seconds.from_now)
+
+    visit document_path(document)
+    assert_selector "h2", text: "Ask about this document"
+
+    assert_selector "h1", text: "This document has been removed", wait: 30
+    assert_no_selector "h2", text: "Ask about this document"
+  end
+
+  # The strongest available proof that nothing navigated: a value set on `window`
+  # survives only if this document was never torn down and rebuilt.
+  test "asking a question appends the answer without reloading the page" do
+    document = ready_document
+    document.chunks.update_all(embedding: Array.new(GeminiClient::EMBEDDING_DIMENSIONS) { 0.01 })
+
+    stub_gemini(gemini_embeddings(1), gemini_answer(text: "Appended, not reloaded.", used: [ 1 ])) do
+      visit document_path(document)
+      page.execute_script("window.__notReloaded = true")
+
+      fill_in "question", with: "Does this reload?"
+      click_on "Ask"
+      assert_text "Appended, not reloaded.", wait: 10
+
+      assert page.evaluate_script("window.__notReloaded === true"),
+        "the page navigated — the answer should have been appended in place"
+      assert_equal "", find("#ask-form input[name=question]").value,
+        "the field should come back empty"
+    end
+  end
+
+  # The bug this guards: a #fragment redirect cannot survive Turbo's fetch, so
+  # the reader was dumped at the top of a long page after every question. Only a
+  # browser can see this — the redirect header looked correct the whole time.
+  test "asking a question leaves the reader at the new answer, not the top" do
+    # ready_document's chunks carry no embedding, so retrieval would find
+    # nothing and the question would be refused before an answer exists.
+    document = ready_document
+    document.chunks.update_all(embedding: Array.new(GeminiClient::EMBEDDING_DIMENSIONS) { 0.01 })
+    6.times do |i|
+      document.messages.create!(role: "user", content: "Older question #{i}? " * 8)
+      document.messages.create!(role: "assistant", content: "Older answer #{i}. " * 25)
+    end
+
+    stub_gemini(gemini_embeddings(1), gemini_answer(text: "The newest answer. " * 20, used: [ 1 ])) do
+      visit document_path(document)
+      fill_in "question", with: "My newest question?"
+      click_on "Ask"
+
+      assert_text "The newest answer.", wait: 10
+
+      # scrollIntoView animates, so poll until it settles rather than sampling
+      # the instant the text appears.
+      offset = 0
+      40.times do
+        offset = page.evaluate_script("window.scrollY")
+        break if offset > 0
+        sleep 0.15
+      end
+
+      assert_operator offset, :>, 0, "the reader was left at the top of the page"
+    end
+  end
+
   test "the page does not scroll sideways on a narrow screen" do
     Capybara.page.driver.browser.manage.window.resize_to(360, 900)
     visit document_path(ready_document)
@@ -64,8 +147,18 @@ class DocumentScreensTest < ApplicationSystemTestCase
     visit document_path(document)
 
     assert_selector "h2", text: "Reading your document"
+    # The spinner is motion-safe, so what "correct" means depends on the
+    # browser. Asserting it always spins fails on any machine that asks for
+    # reduced motion — which many CI browsers do — and, worse, would keep
+    # passing if the motion-safe guard were removed. Both halves are checked.
+    reduced = page.evaluate_script("window.matchMedia('(prefers-reduced-motion: reduce)').matches")
     animation = page.evaluate_script("getComputedStyle(document.querySelector('[data-controller=processing] span')).animationName")
-    assert_equal "spin", animation
+
+    if reduced
+      assert_equal "none", animation, "reduced motion should hold the spinner still"
+    else
+      assert_equal "spin", animation
+    end
 
     document.update!(status: "ready", summary: "It is ready now.")
 

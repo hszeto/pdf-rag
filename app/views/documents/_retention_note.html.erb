@@ -2,15 +2,21 @@
     implied. Unlike its predecessor this app writes files to disk, so the
     promise is worth stating precisely.
 
-    The period comes from Document::RETENTION so the promise and the behaviour
-    cannot drift apart. %>
-<p class="text-body text-ink-muted">
+    No clock time. The server runs in UTC and has no reliable way to know the
+    reader's zone, so a formatted time was not their local time at all — it read
+    as "5:40 PM" to someone whose morning it still was. A duration is correct in
+    every zone (R3.3, D1).
+
+    With a document the sentence ends in a phrase the retention controller
+    replaces with a live countdown. Without JavaScript it stands on its own and
+    still states the promise (R3.5). The period comes from Document::RETENTION,
+    so the promise and the behaviour cannot drift apart. %>
+<p class="text-lead text-ink-muted text-center mt-10">
   <% if document %>
-    We remove this document, and everything we worked out from it, at
-    <strong><%= document.expires_at.strftime("%-l:%M %p") %></strong> —
-    <%= Document::RETENTION.inspect %> after you added it.
+    This document and related data will be deleted
+    <span data-retention-target="remaining"><%= Document::RETENTION.inspect %> after you added it</span>.
   <% else %>
-    We remove your document, and everything we work out from it,
+    Your document and everything we work out from it will be removed
     <%= Document::RETENTION.inspect %> after you add it.
   <% end %>
 </p>

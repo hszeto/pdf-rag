@@ -16,13 +16,49 @@ class RetentionTest < ActionDispatch::IntegrationTest
     assert_select "p", /#{Document::RETENTION.inspect} after you add it/i
   end
 
-  test "the document page names the time it will be removed" do
+  # R3.5: without JavaScript the promise still stands, in words.
+  test "the document page states the promise without a clock time" do
     document = Document.create!(status: "ready", title: "doc.pdf")
 
     get document_path(document)
 
     assert_select "p", /#{Document::RETENTION.inspect} after you added it/i
-    assert_select "strong", text: document.expires_at.strftime("%-l:%M %p")
+  end
+
+  # AC6. The server runs in UTC and cannot know the reader's zone, so a
+  # formatted time was never their local time — it read as evening to someone
+  # whose morning it still was. A duration is correct everywhere.
+  test "no screen renders the expiry as a clock time" do
+    document = Document.create!(status: "ready", title: "doc.pdf")
+
+    get document_path(document)
+
+    assert_no_match(/\d{1,2}:\d{2}\s*(AM|PM)/i, response.body)
+    assert_no_match(/#{Regexp.escape(document.expires_at.strftime("%-l:%M %p"))}/, response.body)
+  end
+
+  # R3.4: the countdown is rebuilt from this on every page load, because asking
+  # a question is a full redirect and the processing screen replaces the page
+  # every few seconds.
+  test "the page carries the expiry as a timestamp for the countdown" do
+    document = Document.create!(status: "ready", title: "doc.pdf")
+
+    get document_path(document)
+
+    assert_select "[data-retention-expires-at-value=?]", document.expires_at.to_i.to_s
+    assert_select "[data-retention-target=remaining]"
+  end
+
+  # D6 and R4.2: the replacement ships with the page, so the swap at zero costs
+  # no request and works even when the service is asleep.
+  test "the removal message is already on the page, hidden" do
+    document = Document.create!(status: "ready", title: "doc.pdf")
+
+    get document_path(document)
+
+    assert_select "[data-retention-target=expired].hidden" do
+      assert_select "h1", /removed/i
+    end
   end
 
   test "uploading schedules the removal for one retention window later" do

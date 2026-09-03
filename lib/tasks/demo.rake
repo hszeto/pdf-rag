@@ -11,6 +11,11 @@
 namespace :demo do
   DIMENSIONS = 3072
 
+  # Stamped on every document this task creates, and the only thing demo:clear
+  # will delete. content_hash otherwise holds a SHA256 of the extracted text, so
+  # a real upload can never collide with this value.
+  SEED_MARKER = "demo-seed".freeze
+
   desc "Create documents in every screen state, without calling Gemini"
   task seed: :environment do
     abort "demo:seed refuses to run in production" if Rails.env.production?
@@ -31,13 +36,18 @@ namespace :demo do
          "about a minute left.\n\n"
   end
 
-  desc "Remove every seeded document"
+  desc "Remove the documents demo:seed created, and nothing else"
   task clear: :environment do
     abort "demo:clear refuses to run in production" if Rails.env.production?
 
-    count = Document.count
-    Document.find_each(&:remove!)
-    puts "removed #{count} document(s)"
+    seeded = Document.where(content_hash: SEED_MARKER)
+    others = Document.where.not(content_hash: SEED_MARKER).or(Document.where(content_hash: nil))
+
+    count = seeded.count
+    seeded.find_each(&:remove!)
+
+    puts "removed #{count} seeded document(s)"
+    puts "left #{others.count} document(s) alone — those were not seeded" if others.any?
   end
 
   # A vector of the right width. The values are irrelevant because nothing here
@@ -61,6 +71,7 @@ namespace :demo do
 
   def self.ready_with_chat
     document = Document.create!(
+      content_hash: SEED_MARKER,
       status: "ready", title: "Tenancy Agreement.pdf",
       summary: "It is a residential tenancy agreement.\n" \
                "It sets the rent, the deposit and the notice period.\n" \
@@ -86,12 +97,13 @@ namespace :demo do
 
   # 40 of 138 pages embedded, which is what the page-progress line reads from.
   def self.mid_embedding
-    document = Document.create!(status: "embedding", title: "Long Policy.pdf")
+    document = Document.create!(content_hash: SEED_MARKER, status: "embedding", title: "Long Policy.pdf")
     pages(document, 138, embedded: 40)
   end
 
   def self.expiring_soon
     document = Document.create!(
+      content_hash: SEED_MARKER,
       status: "ready", title: "Nearly Gone.pdf",
       summary: "This one is here to watch the countdown finish.",
       expires_at: 70.seconds.from_now
@@ -101,6 +113,7 @@ namespace :demo do
 
   def self.failed_document
     Document.create!(
+      content_hash: SEED_MARKER,
       status: "failed", title: "Scanned Leaflet.pdf",
       failure_reason: "We could not find any words in this document. If it is a " \
                       "photo or a scan, please try a version you can select text in."
@@ -109,6 +122,7 @@ namespace :demo do
 
   def self.with_scan_notes
     document = Document.create!(
+      content_hash: SEED_MARKER,
       status: "ready", title: "Council Notice.pdf",
       summary: "It is a notice about a planning application.",
       links: [ "https://www.gov.uk/planning-permission", "mailto:planning@example.gov" ],
