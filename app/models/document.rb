@@ -1,7 +1,19 @@
 class Document < ApplicationRecord
-  # Screening happens before a Document exists, so anything with a record here
-  # has already been judged safe to open.
-  has_one_attached :file
+# Screening happens before a Document exists, so anything with a record here
+# has already been judged safe to open.
+has_one_attached :file
+
+  # Removes the row, its passages and the uploaded bytes, in that order and
+  # without deferring any of it.
+  #
+  # Active Storage's default is purge_later, which enqueues a second job to
+  # delete the file. For a retention promise that is too weak a guarantee: if
+  # that job is lost the record is gone while the document is still sitting on
+  # disk, which is precisely the thing the hour is supposed to prevent.
+  def remove!
+    file.purge
+    destroy!
+  end
   has_many :chunks, class_name: "DocumentChunk", dependent: :destroy
   has_many :messages, dependent: :destroy
 

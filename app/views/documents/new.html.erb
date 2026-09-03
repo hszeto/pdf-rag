@@ -18,6 +18,4 @@
         class: "w-full sm:w-auto rounded-lg bg-accent text-accent-ink px-8 py-4 text-lead font-bold cursor-pointer" %>
 <% end %>
 
-<p class="text-body text-ink-muted">
-  Your document is removed automatically an hour after you add it.
-</p>
+<%= render "documents/retention_note", document: nil %>

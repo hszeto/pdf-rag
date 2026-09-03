@@ -34,7 +34,4 @@
 
 <%= render "documents/scan_notes", document: @document %>
 
-<p class="text-body text-ink-muted">
-  This document is removed automatically at
-  <%= @document.expires_at.strftime("%-l:%M %p") %>.
-</p>
+<%= render "documents/retention_note", document: @document %>

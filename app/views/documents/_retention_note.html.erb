@@ -1,0 +1,13 @@
+<%# D3: the app keeps documents for an hour, and says so rather than leaving it
+    implied. Unlike its predecessor this app writes files to disk, so the
+    promise is worth stating precisely. %>
+<p class="text-body text-ink-muted">
+  <% if document %>
+    We remove this document, and everything we worked out from it, at
+    <strong><%= document.expires_at.strftime("%-l:%M %p") %></strong> —
+    one hour after you added it.
+  <% else %>
+    We remove your document, and everything we work out from it, one hour after
+    you add it.
+  <% end %>
+</p>

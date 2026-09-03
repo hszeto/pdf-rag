@@ -19,6 +19,7 @@ class DocumentsController < ApplicationController
 
     document = store(file, scan)
     IngestDocumentJob.perform_later(document.id)
+    DeleteDocumentJob.set(wait_until: document.expires_at).perform_later(document.id)
 
     redirect_to document_path(document)
   ensure
