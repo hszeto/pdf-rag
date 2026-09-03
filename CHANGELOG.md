@@ -2,7 +2,7 @@
 
 Notable changes to this project.
 
-## Unreleased
+## [0.1.0] - 2026-09-02
 
 ### Added — any-PDF retrieval
 
