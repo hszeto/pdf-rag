@@ -1,21 +1,61 @@
-<%# The upload screen. The form gains its action, screening and ingestion with
-    the Document model in the next checkpoints. %>
+<%# The upload screen. %>
 <% if flash[:alert].present? %>
   <%= render "documents/error", message: flash[:alert] %>
 <% end %>
 
-<h1 class="text-title font-bold mb-4">Understand any document</h1>
+<h1 class="text-title font-bold mb-4">Understand any PDF document</h1>
 
 <p class="text-lead mb-10">
-  Add a PDF and we'll read it, then answer your questions about what's inside.
+  Add a PDF and we'll read it and answer questions about it.
 </p>
 
 <%= form_with url: documents_path, method: :post, class: "mb-8" do |form| %>
+  <%# The label stays visible (D2). A file input has no placeholder to move it
+      into, and this is the only instruction on the screen. %>
   <%= form.label :document, "Add a PDF", class: "block text-lead font-bold mb-4" %>
-  <%= form.file_field :document, accept: "application/pdf", required: true,
-        class: "block w-full text-body border-2 border-rule rounded-lg p-4 mb-6" %>
-  <%= form.submit "Read my document",
-        class: "w-full sm:w-auto rounded-lg bg-accent text-accent-ink px-8 py-4 text-lead font-bold cursor-pointer" %>
+
+  <%# The pill is applied by JavaScript, not rendered by the server: without it
+      the plain native control stays, and that control is the only thing able to
+      show which file was chosen (R4). Everything visual therefore hangs off
+      `data-enhanced`, which upload_controller sets on connect. %>
+  <div data-controller="upload"
+       class="group relative
+              data-[enhanced]:rounded-full data-[enhanced]:border-2 data-[enhanced]:border-rule">
+
+    <%# Transparent rather than hidden. `opacity-0` keeps the box, which is what
+        keeps the browser's own `required` check working — sr-only and display:none
+        collapse it, and Chrome then refuses to submit while reporting it only to
+        the console. Measured before this was written.
+
+        It stops short of the button (right-32) so the whole left of the pill
+        opens the picker while Submit still submits. %>
+    <%= form.file_field :document, accept: "application/pdf", required: true,
+          data: { action: "change->upload#render" },
+          class: "block w-full text-body border-2 border-rule rounded-lg p-4
+                  group-data-[enhanced]:absolute group-data-[enhanced]:inset-y-0
+                  group-data-[enhanced]:left-0 group-data-[enhanced]:right-32
+                  group-data-[enhanced]:w-auto group-data-[enhanced]:opacity-0
+                  group-data-[enhanced]:cursor-pointer group-data-[enhanced]:border-0
+                  group-data-[enhanced]:rounded-none group-data-[enhanced]:p-0
+                  group-data-[enhanced]:z-10" %>
+
+    <%# Shown only when enhanced; the native control carries its own filename
+        otherwise. pointer-events-none so it never intercepts the picker. %>
+    <p class="hidden group-data-[enhanced]:block truncate pointer-events-none
+              py-4 pl-6 pr-32 text-lead text-ink-muted"
+       data-upload-target="name">Choose a PDF</p>
+
+    <%# text-body, not smaller: nothing on this screen may fall below 18px, and a
+        system test asserts it. %>
+    <%= form.submit "Submit",
+          class: "mt-4 w-full sm:w-auto rounded-lg bg-accent text-accent-ink px-8 py-4 text-lead font-bold cursor-pointer
+                  group-data-[enhanced]:absolute group-data-[enhanced]:right-2
+                  group-data-[enhanced]:top-1/2 group-data-[enhanced]:-translate-y-1/2
+                  group-data-[enhanced]:mt-0 group-data-[enhanced]:w-auto
+                  group-data-[enhanced]:rounded-full group-data-[enhanced]:px-6
+                  group-data-[enhanced]:py-2 group-data-[enhanced]:text-body
+                  group-data-[enhanced]:z-20" %>
+  </div>
 <% end %>
 
 <%= render "documents/retention_note", document: nil %>

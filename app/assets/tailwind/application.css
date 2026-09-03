@@ -60,6 +60,15 @@ body {
   outline-offset: 2px;
 }
 
+/* The upload field's input is transparent once enhanced, and opacity hides its
+ * focus ring along with it. The pill draws the ring instead, so a keyboard user
+ * can still see where they are. Matches the 3px accent outline used everywhere
+ * else on the site. */
+[data-enhanced]:has(input:focus-visible) {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 /* The countdown's number, and only the number. A fade rather than a hard on/off:
  * this is a figure the reader is meant to read, and half of a true blink cycle
  * would leave it invisible. One cycle every 1.5s is far below the three-per-

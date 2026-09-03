@@ -2,6 +2,26 @@
 
 Notable changes to this project.
 
+## [0.3.0] - 2026-09-03
+
+### Changed
+
+- **The upload field is one pill**, matching the chat input: the file control, the
+  chosen filename and a "Submit" button on a single line. The browser's own file
+  control is replaced rather than restyled — only its button is stylable, and it
+  is drawn differently by every browser.
+- The heading names the file type: **"Understand any PDF document"**. The app
+  accepts nothing else, at the validator and in the field's `accept` attribute.
+
+### Notes
+
+- The field is enhanced by JavaScript, never rendered enhanced. Without
+  JavaScript the browser's own control stays, still shows its filename and still
+  uploads — a transparent input would show nothing.
+- The input is made transparent, not hidden. `opacity-0` keeps its box, which is
+  what keeps the browser's `required` check working; collapsing the box makes
+  Chrome refuse to submit while reporting it only to the console.
+
 ## [0.2.0] - 2026-09-03
 
 ### Changed
