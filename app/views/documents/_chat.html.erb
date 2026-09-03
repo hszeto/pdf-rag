@@ -1,0 +1,33 @@
+<%# Questions about the document. Answers carry where they came from, so a
+    reader can check rather than take them on trust. %>
+<section aria-labelledby="ask-heading" class="mb-10">
+  <h2 id="ask-heading" class="text-lead font-bold mb-5">Ask about this document</h2>
+
+  <% if document.messages.any? %>
+    <ol class="mb-8 space-y-5 list-none">
+      <% document.messages.ordered.each do |message| %>
+        <li class="<%= message.asked? ? "sm:ml-12" : "sm:mr-12" %>">
+          <p class="text-body text-ink-muted mb-1">
+            <%= message.asked? ? "You asked" : "Answer" %>
+          </p>
+          <div class="rounded-lg p-5 text-lead <%= message.asked? ? "bg-notice-bg text-notice-ink" : "border-2 border-rule" %>">
+            <%= message.content %>
+          </div>
+          <% if message.answered? && message.citations.any? %>
+            <p class="text-body text-ink-muted mt-2">
+              From <%= message.citations.to_sentence %> of your document.
+            </p>
+          <% end %>
+        </li>
+      <% end %>
+    </ol>
+  <% end %>
+
+  <%= form_with url: document_messages_path(document), method: :post do |form| %>
+    <%= form.label :question, "Type your question", class: "block text-body mb-2" %>
+    <%= form.text_field :question, required: true, autocomplete: "off",
+          class: "block w-full text-lead border-2 border-rule rounded-lg p-4 mb-4" %>
+    <%= form.submit "Ask",
+          class: "w-full sm:w-auto rounded-lg bg-accent text-accent-ink px-8 py-4 text-lead font-bold cursor-pointer" %>
+  <% end %>
+</section>

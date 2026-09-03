@@ -1,0 +1,21 @@
+<%# The upload screen. The form gains its action, screening and ingestion with
+    the Document model in the next checkpoints. %>
+<% if flash[:alert].present? %>
+  <%= render "documents/error", message: flash[:alert] %>
+<% end %>
+
+<h1 class="text-title font-bold mb-4">Understand any document</h1>
+
+<p class="text-lead mb-10">
+  Add a PDF and we'll read it, then answer your questions about what's inside.
+</p>
+
+<%= form_with url: documents_path, method: :post, class: "mb-8" do |form| %>
+  <%= form.label :document, "Add a PDF", class: "block text-lead font-bold mb-4" %>
+  <%= form.file_field :document, accept: "application/pdf", required: true,
+        class: "block w-full text-body border-2 border-rule rounded-lg p-4 mb-6" %>
+  <%= form.submit "Read my document",
+        class: "w-full sm:w-auto rounded-lg bg-accent text-accent-ink px-8 py-4 text-lead font-bold cursor-pointer" %>
+<% end %>
+
+<%= render "documents/retention_note", document: nil %>

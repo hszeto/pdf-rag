@@ -1,8 +1,8 @@
 # Name of your application. Used to uniquely configure containers.
-service: insurance_helper
+service: pdf_rag
 
 # Name of the container image (use your-user/app-name on external registries).
-image: insurance_helper
+image: pdf_rag
 
 # Deploy to these servers.
 servers:

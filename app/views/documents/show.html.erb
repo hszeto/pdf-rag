@@ -1,0 +1,34 @@
+<%# Interim view for this checkpoint: the document is stored and being read.
+    The summary and chat arrive with retrieval. %>
+<% if flash[:alert].present? %>
+  <%= render "documents/error", message: flash[:alert] %>
+<% end %>
+
+<h1 class="text-title font-bold mb-4"><%= @document.title %></h1>
+
+<% if @document.processing? %>
+  <%= render "documents/processing", document: @document %>
+<% elsif @document.failed? %>
+  <%= render "documents/error", message: @document.failure_reason %>
+<% else %>
+  <% if @document.summary.present? %>
+    <section class="mb-10">
+      <h2 class="text-lead font-bold mb-3">What this document is</h2>
+      <ul class="text-body list-disc pl-6 space-y-2">
+        <% @document.summary.split("\n").each do |point| %>
+          <li><%= point %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <p class="text-body text-ink-muted mb-8">
+    <%= pluralize(@document.chunks.count, "passage") %> ready to search.
+  </p>
+
+  <%= render "documents/chat", document: @document %>
+<% end %>
+
+<%= render "documents/scan_notes", document: @document %>
+
+<%= render "documents/retention_note", document: @document %>

@@ -20,7 +20,16 @@ Rails.application.configure do
 
   # Show full error reports.
   config.consider_all_requests_local = true
-  config.cache_store = :null_store
+  # Not :null_store — it silently discards writes, and this app keeps all session
+  # state in the cache. :memory_store keeps the suite free of an external Redis
+  # dependency, and parallel test workers are separate processes, so each gets its
+  # own isolated store.
+  config.cache_store = :memory_store
+
+  # Jobs are enqueued, not run, unless a test asks for it. application.rb sets
+  # the Sidekiq adapter for real environments; the suite must not need Redis or
+  # a worker process.
+  config.active_job.queue_adapter = :test
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable
@@ -47,4 +56,6 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+  # Uploaded documents live on local disk for the hour they are kept.
+  config.active_storage.service = :test
 end
