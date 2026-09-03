@@ -69,12 +69,14 @@ class DocumentScreensTest < ApplicationSystemTestCase
   # server has gone to sleep in the meantime.
   test "the document is replaced in place when the countdown runs out" do
     document = ready_document
-    document.update!(expires_at: 5.seconds.from_now)
+    # Long enough that a slow runner cannot expire it mid-load — at which point
+    # the server would redirect instead, and the swap would never be reached.
+    document.update!(expires_at: 15.seconds.from_now)
 
     visit document_path(document)
     assert_selector "h2", text: "Ask about this document"
 
-    assert_selector "h1", text: "This document has been removed", wait: 20
+    assert_selector "h1", text: "This document has been removed", wait: 30
     assert_no_selector "h2", text: "Ask about this document"
   end
 
@@ -122,7 +124,7 @@ class DocumentScreensTest < ApplicationSystemTestCase
       # scrollIntoView animates, so poll until it settles rather than sampling
       # the instant the text appears.
       offset = 0
-      20.times do
+      40.times do
         offset = page.evaluate_script("window.scrollY")
         break if offset > 0
         sleep 0.15
@@ -145,8 +147,18 @@ class DocumentScreensTest < ApplicationSystemTestCase
     visit document_path(document)
 
     assert_selector "h2", text: "Reading your document"
+    # The spinner is motion-safe, so what "correct" means depends on the
+    # browser. Asserting it always spins fails on any machine that asks for
+    # reduced motion — which many CI browsers do — and, worse, would keep
+    # passing if the motion-safe guard were removed. Both halves are checked.
+    reduced = page.evaluate_script("window.matchMedia('(prefers-reduced-motion: reduce)').matches")
     animation = page.evaluate_script("getComputedStyle(document.querySelector('[data-controller=processing] span')).animationName")
-    assert_equal "spin", animation
+
+    if reduced
+      assert_equal "none", animation, "reduced motion should hold the spinner still"
+    else
+      assert_equal "spin", animation
+    end
 
     document.update!(status: "ready", summary: "It is ready now.")
 
