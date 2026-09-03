@@ -35,7 +35,43 @@ class GeminiClient
     @api_key = api_key || Rails.application.credentials.gemini_api_key
   end
 
+
+  # The API's hard limit, confirmed by its own 400 response rather than
+  # inferred: "at most 100 requests can be in one batch". This is what makes the
+  # free tier viable — a 160-page document is a couple of requests rather than
+  # a couple of hundred.
+  MAX_EMBEDDING_BATCH = 100
+
+  # Returns one vector per text, in the order given.
+  def embed(texts)
+    texts = Array(texts)
+    return [] if texts.empty?
+
+    EmbeddingBatches.for(texts).flat_map { |batch| embed_batch(batch) }
+  end
+
   private
+    def embed_batch(texts)
+      body = post("#{EMBEDDING_MODEL}:batchEmbedContents", {
+        requests: texts.map do |text|
+          { model: "models/#{EMBEDDING_MODEL}", content: { parts: [ { text: text } ] } }
+        end
+      })
+
+      vectors = Array(body["embeddings"]).map { |embedding| embedding["values"] }
+
+      # Vectors are matched to chunks by position, so a short or reordered
+      # response would attach the wrong passage's meaning to a chunk — a silent
+      # corruption that would surface much later as retrieval simply being bad.
+      unless vectors.length == texts.length && vectors.all? { |v| v&.length == EMBEDDING_DIMENSIONS }
+        raise ProcessingError::ServiceUnavailable,
+          "embedding response did not match the request: asked for #{texts.length}, " \
+          "got #{vectors.length} vectors"
+      end
+
+      vectors
+    end
+
     def generation_config
       {
         temperature: TEMPERATURE,

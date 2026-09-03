@@ -38,15 +38,9 @@ class FakeGeminiTransport
         case response
         when Array then response
         when String then [ 200, response ]
-        else [ 200, success_envelope(response) ]
+        else [ 200, response.to_json ]
         end
 
       GeminiClient::NetHttpTransport::Response.new(status: status, body: body)
-    end
-
-    # Mirrors the real envelope: the JSON we care about arrives as a string
-    # inside candidates/content/parts.
-    def success_envelope(payload)
-      { candidates: [ { content: { parts: [ { text: payload.to_json } ] } } ] }.to_json
     end
 end

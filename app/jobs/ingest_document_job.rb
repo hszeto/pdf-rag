@@ -24,12 +24,26 @@ class IngestDocumentJob < ApplicationJob
 
     build_chunks(document, pages)
     document.update!(status: "embedding")
+    enqueue_embedding(document)
   rescue ProcessingError => e
     Rails.logger.error("[ingest] document=#{document_id} failed #{e.class.name.demodulize}: #{e.message}")
     document&.fail!(e.user_message)
   end
 
   private
+    # One job per batch, so progress survives a failure and no worker is held for
+    # the whole document.
+    def enqueue_embedding(document)
+      chunks = document.chunks.ordered.to_a
+      # Grouped by token budget rather than count: the free tier rejects on
+      # tokens long before the API's 100-item ceiling is reached.
+      EmbeddingBatches.for(chunks.map(&:content)).each_with_index.inject(0) do |offset, (batch, _)|
+        ids = chunks[offset, batch.length].map(&:id)
+        EmbedChunkBatchJob.perform_later(document.id, ids)
+        offset + batch.length
+      end
+    end
+
     def extract(document)
       document.file.open do |file|
         PdfExtractionService.new(file).pages

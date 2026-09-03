@@ -113,6 +113,55 @@ class IngestDocumentJobTest < ActiveSupport::TestCase
     assert_equal 0, document.reload.chunks.count
   end
 
+
+  # AC 24: the whole cost model rests on batching. 136 chunks must be a couple of
+  # requests, not 136.
+  test "chunks are queued for embedding in batches, not one at a time" do
+    document = stored_document
+
+    assert_enqueued_jobs 1, only: EmbedChunkBatchJob do
+      IngestDocumentJob.perform_now(document.id)
+    end
+  end
+
+  # Batches are sized by token budget, not by count: the free tier rejects a
+  # request on tokens long before the API's own 100-item ceiling.
+  test "a long document is split into batches that fit the token budget" do
+    document = stored_document(file_fixture("long_policy.pdf").to_s)
+
+    IngestDocumentJob.perform_now(document.id)
+
+    batches = enqueued_jobs.select { |j| j[:job] == EmbedChunkBatchJob }
+    chunks = document.reload.chunks.ordered.index_by(&:id)
+
+    assert_operator batches.length, :>=, 1
+    batches.each do |batch|
+      texts = batch[:args].last.map { |id| chunks[id].content }
+      tokens = texts.sum { |t| EmbeddingBatches.estimate(t) }
+      assert_operator tokens, :<=, EmbeddingBatches::MAX_TOKENS,
+        "a batch was built that the API would reject"
+      assert_operator batch[:args].last.length, :<=, EmbeddingBatches::MAX_ITEMS
+    end
+  end
+
+  test "every chunk is covered by exactly one batch" do
+    document = stored_document(file_fixture("long_policy.pdf").to_s)
+
+    IngestDocumentJob.perform_now(document.id)
+
+    queued = enqueued_jobs.select { |j| j[:job] == EmbedChunkBatchJob }.flat_map { |j| j[:args].last }
+    assert_equal document.reload.chunks.pluck(:id).sort, queued.sort
+  end
+
+  test "a reused document queues no embedding at all" do
+    original = ingested_document
+    original.chunks.update_all(embedding: Array.new(GeminiClient::EMBEDDING_DIMENSIONS, 0.05))
+    original.update!(status: "ready")
+
+    assert_no_enqueued_jobs only: EmbedChunkBatchJob do
+      IngestDocumentJob.perform_now(stored_document.id)
+    end
+  end
   private
     def stored_document(path = nil)
       path ||= readable_pdf

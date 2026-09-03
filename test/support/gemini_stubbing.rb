@@ -10,4 +10,10 @@ module GeminiStubbing
   ensure
     GeminiClient.transport_factory = previous
   end
+
+  # A batchEmbedContents response with one vector per request, so a test does not
+  # have to hand-build 100 vectors of 3072 floats.
+  def gemini_embeddings(count, dimensions: GeminiClient::EMBEDDING_DIMENSIONS)
+    { "embeddings" => Array.new(count) { { "values" => Array.new(dimensions) { 0.01 } } } }
+  end
 end
