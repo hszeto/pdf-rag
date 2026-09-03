@@ -29,3 +29,8 @@
 
 /app/assets/builds/*
 !/app/assets/builds/.keep
+
+# Ignore uploaded documents. Nothing a reader uploads should ever be
+# committable, least of all in an app that promises to hold it for an hour.
+/storage/*
+!/storage/.keep

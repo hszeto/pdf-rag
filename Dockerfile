@@ -63,11 +63,24 @@ FROM base
 # Run and own only the runtime files as a non-root user for security
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash
-USER 1000:1000
 
 # Copy built artifacts: gems, application
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
+
+# Uploaded documents are written here for the hour they live. The directory is
+# empty in a fresh checkout and git does not track empty directories, so it is
+# absent from the build context and Active Storage must create it at runtime.
+#
+# That needs /rails itself to belong to the runtime user, and it does not:
+# WORKDIR created it as root, and `COPY --chown` sets ownership on what it
+# copies, never on a destination directory that already exists. Without this the
+# app starts, connects, writes its row, and only then fails on `mkdir` —
+# EACCES on the very last step of an upload.
+RUN mkdir -p /rails/storage /rails/tmp /rails/log && \
+    chown rails:rails /rails /rails/storage /rails/tmp /rails/log
+
+USER 1000:1000
 
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
