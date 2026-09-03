@@ -43,13 +43,6 @@ class ProcessingError < StandardError
     end
   end
 
-  class NotInsurance < ProcessingError
-    def user_message
-      "This does not look like an insurance document. Could you try your plan " \
-      "summary or insurance card?"
-    end
-  end
-
   # Raised when the cache write fails, so an upload never *looks* like it worked
   # and then vanishes on the next request (R3.6).
   class StorageFailure < ProcessingError
@@ -61,7 +54,7 @@ class ProcessingError < StandardError
   end
 
   class NoDocument < ProcessingError
-    def user_message = "Please add your insurance document first."
+    def user_message = "Please add your document first."
   end
 
 # Structural content that asks a PDF viewer to execute something. Carries which

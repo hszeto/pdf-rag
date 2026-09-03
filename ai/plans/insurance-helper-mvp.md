@@ -87,8 +87,8 @@ empty candidate that looks like a bug rather than a config error.
 ### Error handling
 A single `ProcessingError` hierarchy with a `user_message` maps every failure to spec
 copy: `NotAPdf`, `TooLarge`, `Locked`, `Damaged`, `Unreadable` (D3's scanned case),
-`NotInsurance`, `ServiceUnavailable`. Controllers rescue one type and render one error
-partial with a retry control, satisfying R7.5's "never a dead end" in one place.
+`ServiceUnavailable`. Controllers rescue one type and render one error partial with
+a retry control, satisfying R7.5's "never a dead end" in one place.
 
 ---
 
