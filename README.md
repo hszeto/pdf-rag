@@ -121,6 +121,35 @@ plain text rather than clickable links. Genuine documents are full of both — a
 insurance policy carries a provenance attachment and ten legitimate links to government
 and insurer websites — so refusing them would reject exactly the documents this is for.
 
+## Deploying to Render
+
+`render.yaml` is a Blueprint: in the Render dashboard, **New → Blueprint**, point it at
+this repository, and supply `RAILS_MASTER_KEY` when prompted. It creates a web service,
+a Postgres instance and a Key Value instance, all on free plans.
+
+**Puma and Sidekiq run in the same service**, started together by `bin/render-start`.
+That is forced by the file store: Render cannot share a disk between services, and
+uploads live on local disk for their hour, so a separate worker would run
+`IngestDocumentJob` on a filesystem where the PDF does not exist. Moving Active Storage
+to S3-compatible object storage is what would let the two split apart.
+
+**Migrations run at boot**, in `bin/render-start`, rather than in a pre-deploy command —
+those are paid-only. It is safe because a free service is single-instance and nothing
+races it. On a paid plan with more than one instance, move `db:prepare` into
+`preDeployCommand` and take it out of the script.
+
+Two free-tier consequences are worth knowing before you rely on the URL:
+
+- **The database expires 30 days after creation**, with 14 days' grace before deletion.
+- **The service spins down after 15 minutes** of no traffic and takes about a minute to
+  wake, which the processing screen will sit through.
+
+Neither costs you data that was meant to survive: documents are gone after an hour by
+design, and an ephemeral filesystem that discards uploads on restart only enforces that
+sooner. `Document.live` scopes every read to `expires_at`, so an expired document is
+unreachable even though no cron job runs the sweep — cron is paid-only too, and the
+commented-out block in `render.yaml` is there for when it is not.
+
 ## A caution about the free tier
 
 The Gemini free tier's daily request cap is exhausted by embedding roughly one large

@@ -1,0 +1,43 @@
+#!/bin/bash
+# Boots the whole application inside one Render web service: Puma and Sidekiq
+# side by side, in the same container.
+#
+# That is not a shortcut. Render cannot share a persistent disk between
+# services, and Active Storage keeps uploads on local disk for the hour they
+# live, so a separate worker service would run IngestDocumentJob on a filesystem
+# where the uploaded PDF does not exist. Same container, same disk, same files.
+#
+# Free instances also have no pre-deploy command, which is where migrations
+# would normally run. Doing it here is safe precisely because a free service is
+# single-instance: there is no second boot to race with. If this ever moves to a
+# paid plan with more than one instance, db:prepare belongs in preDeployCommand
+# and should come out of this script.
+
+set -euo pipefail
+
+# Creates the `pdfrag` schema (db:ensure_schema is hooked onto db:prepare) before
+# anything can quietly create tables in `public` instead.
+./bin/rails db:prepare
+
+set +e
+
+bundle exec sidekiq -c "${SIDEKIQ_CONCURRENCY:-2}" &
+sidekiq_pid=$!
+
+./bin/rails server -b 0.0.0.0 -p "${PORT:-3000}" &
+puma_pid=$!
+
+shutdown() {
+  trap - TERM INT
+  kill -TERM "$sidekiq_pid" "$puma_pid" 2>/dev/null
+  wait "$sidekiq_pid" "$puma_pid" 2>/dev/null
+}
+trap shutdown TERM INT
+
+# Either process dying takes the container with it, so Render restarts a whole
+# service rather than leaving a web process running with no worker behind it —
+# which would look healthy while every upload sat in "extracting" forever.
+wait -n
+status=$?
+shutdown
+exit "$status"

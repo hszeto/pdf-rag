@@ -1,0 +1,81 @@
+# Render Blueprint. Deploy with: New → Blueprint, pointed at this repository.
+#
+# One web service runs both Puma and Sidekiq (see bin/render-start for why),
+# alongside a Postgres instance for pgvector and a Key Value instance for the
+# cache, Action Cable and the Sidekiq queue.
+
+services:
+  - type: web
+    name: pdf-rag
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /up
+    # Overrides the Dockerfile's CMD, which starts the web server alone.
+    dockerCommand: ./bin/render-start
+    envVars:
+      # Decrypts config/credentials.yml.enc, which holds gemini_api_key.
+      # sync: false means Render prompts for it instead of storing it here.
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pdf-rag-db
+          property: connectionString
+      # Cache uses this as given (DB 0); cable.yml appends /1 and the Sidekiq
+      # initializer appends /2.
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: pdf-rag-kv
+          property: connectionString
+      - key: RAILS_ENV
+        value: production
+      # 512 MB has to hold Puma and Sidekiq together, so both stay small.
+      - key: WEB_CONCURRENCY
+        value: "0"
+      - key: RAILS_MAX_THREADS
+        value: "3"
+      - key: SIDEKIQ_CONCURRENCY
+        value: "2"
+
+  - type: keyvalue
+    name: pdf-rag-kv
+    plan: free
+    region: oregon
+    # Internal connections only — nothing outside Render reaches it.
+    ipAllowList: []
+
+  # Retention sweep. Cron jobs are not available on the free tier, so this is
+  # commented out; correctness does not depend on it, because Document.live
+  # scopes every read to expires_at and an expired document is unreachable
+  # whether or not anything has deleted it. Uncomment on a paid plan to free
+  # the bytes on schedule.
+  #
+  # - type: cron
+  #   name: pdf-rag-retention-sweep
+  #   runtime: docker
+  #   plan: starter
+  #   region: oregon
+  #   schedule: "*/15 * * * *"
+  #   dockerCommand: ./bin/rails retention:sweep
+  #   envVars:
+  #     - key: RAILS_MASTER_KEY
+  #       sync: false
+  #     - key: DATABASE_URL
+  #       fromDatabase:
+  #         name: pdf-rag-db
+  #         property: connectionString
+  #     - key: REDIS_URL
+  #       fromService:
+  #         type: keyvalue
+  #         name: pdf-rag-kv
+  #         property: connectionString
+
+databases:
+  - name: pdf-rag-db
+    plan: free
+    region: oregon
+    postgresMajorVersion: "17"
+    databaseName: pdf_rag_production
+    user: pdf_rag
