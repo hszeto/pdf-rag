@@ -51,6 +51,29 @@ class DocumentScreensTest < ApplicationSystemTestCase
     assert_no_selector "a[href='http://example.gov/']"
   end
 
+  # D1: minutes, never seconds. A second-by-second counter reads as pressure,
+  # and the note is here to be honest about the limit, not to hurry anyone.
+  test "the retention note counts down in minutes and shows no clock time" do
+    visit document_path(ready_document)
+
+    assert_text(/in \d+ minutes?/)
+    assert_no_text(/\d{1,2}:\d{2}\s*(AM|PM)/i)
+  end
+
+  # D6 and R4.2: when the window closes the document leaves the screen without a
+  # request. The replacement arrived with the page, so this holds even if the
+  # server has gone to sleep in the meantime.
+  test "the document is replaced in place when the countdown runs out" do
+    document = ready_document
+    document.update!(expires_at: 5.seconds.from_now)
+
+    visit document_path(document)
+    assert_selector "h2", text: "Ask about this document"
+
+    assert_selector "h1", text: "This document has been removed", wait: 20
+    assert_no_selector "h2", text: "Ask about this document"
+  end
+
   test "the page does not scroll sideways on a narrow screen" do
     Capybara.page.driver.browser.manage.window.resize_to(360, 900)
     visit document_path(ready_document)

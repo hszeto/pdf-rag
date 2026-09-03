@@ -24,9 +24,9 @@
             </p>
 
             <%# Both colour pairs are already asserted for contrast in
-                PaletteTest; break-words keeps a long unbroken string from
+                PaletteTest; wrap-break-word keeps a long unbroken string from
                 widening the page, which the no-sideways-scroll test guards. %>
-            <div class="rounded-2xl p-5 text-lead break-words <%=
+            <div class="rounded-2xl p-5 text-lead wrap-break-word <%=
                   message.asked? ? "bg-notice-bg text-notice-ink rounded-br-sm" : "border-2 border-rule rounded-bl-sm" %>">
               <%= message.content %>
             </div>
