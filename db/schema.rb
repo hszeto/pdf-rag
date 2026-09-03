@@ -11,11 +11,13 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[8.1].define(version: 2026_09_03_010000) do
+  create_schema "pdfrag"
+
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
 
-  create_table "active_storage_attachments", force: :cascade do |t|
+  create_table "pdfrag.active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -25,7 +27,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_010000) do
     t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
   end
 
-  create_table "active_storage_blobs", force: :cascade do |t|
+  create_table "pdfrag.active_storage_blobs", force: :cascade do |t|
     t.bigint "byte_size", null: false
     t.string "checksum"
     t.string "content_type"
@@ -37,13 +39,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_010000) do
     t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
   end
 
-  create_table "active_storage_variant_records", force: :cascade do |t|
+  create_table "pdfrag.active_storage_variant_records", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
-  create_table "document_chunks", force: :cascade do |t|
+  create_table "pdfrag.document_chunks", force: :cascade do |t|
     t.text "content", null: false
     t.datetime "created_at", null: false
     t.bigint "document_id", null: false
@@ -55,7 +57,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_010000) do
     t.index ["document_id"], name: "index_document_chunks_on_document_id"
   end
 
-  create_table "documents", force: :cascade do |t|
+  create_table "pdfrag.documents", force: :cascade do |t|
     t.jsonb "attachments", default: [], null: false
     t.string "content_hash"
     t.datetime "created_at", null: false
@@ -70,7 +72,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_010000) do
     t.index ["expires_at"], name: "index_documents_on_expires_at"
   end
 
-  create_table "messages", force: :cascade do |t|
+  create_table "pdfrag.messages", force: :cascade do |t|
     t.jsonb "citations", default: [], null: false
     t.text "content", null: false
     t.datetime "created_at", null: false
@@ -81,8 +83,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_010000) do
     t.index ["document_id"], name: "index_messages_on_document_id"
   end
 
-  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
-  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
-  add_foreign_key "document_chunks", "documents", on_delete: :cascade
-  add_foreign_key "messages", "documents", on_delete: :cascade
+  add_foreign_key "pdfrag.active_storage_attachments", "pdfrag.active_storage_blobs", column: "blob_id"
+  add_foreign_key "pdfrag.active_storage_variant_records", "pdfrag.active_storage_blobs", column: "blob_id"
+  add_foreign_key "pdfrag.document_chunks", "pdfrag.documents", on_delete: :cascade
+  add_foreign_key "pdfrag.messages", "pdfrag.documents", on_delete: :cascade
+
 end

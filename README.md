@@ -44,6 +44,45 @@ bin/setup     # installs gems, creates and migrates the databases, starts everyt
 
 `bin/dev` runs the web server, the Tailwind watcher and a Sidekiq worker together.
 
+## Sharing a database
+
+Every table this app owns lives in a Postgres schema called `pdfrag` rather than in
+`public`, so the app can share one database with other applications. That covers its
+own three tables, Active Storage's three, and Rails' `schema_migrations` and
+`ar_internal_metadata` — the last two being the reason a schema was chosen over a
+`pdfrag_` table prefix. Two Rails apps sharing one migration ledger each read the
+other's versions as already-run, and `db:migrate` can conclude there is nothing to do.
+
+The search path is set once, in `config/database.yml`:
+
+```yaml
+schema_search_path: pdfrag,public
+```
+
+**`public` is load-bearing.** The `vector` extension may live there — whoever creates
+it first decides — and a search path without `public` leaves every embedding column
+unable to resolve its type.
+
+The schema is created automatically: `db:ensure_schema` is hooked onto `db:migrate`
+and `db:prepare`, and `db/schema.rb` begins with `create_schema "pdfrag"` for the
+load path. Nothing needs creating by hand.
+
+That automation is not convenience. **A missing schema does not raise** — Postgres
+skips an entry in `search_path` that does not exist and falls through to the next one,
+so the app would quietly create its tables in `public`, beside whatever else is there.
+Measured:
+
+```
+SET search_path TO pdfrag,public; CREATE TABLE documents (id int);
+  => public.documents
+```
+
+Two things follow. **Deploying needs an explicit migrate step** — `bin/docker-entrypoint`
+is a bare `exec`, so nothing prepares the database on boot. And **a connection pooler in
+transaction mode would break this**, because `search_path` is per-connection state; a
+pooler that reuses backends across transactions can lose it, which looks like missing
+tables while quietly reading `public`.
+
 ## Running it
 
 Visit <http://localhost:3000>, add a PDF, and wait while it is read. A 140-page document

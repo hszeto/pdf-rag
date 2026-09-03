@@ -5,6 +5,20 @@ default: &default
   encoding: unicode
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
 
+  # This app shares one Postgres database with other applications, so everything
+  # it owns lives in its own schema rather than in `public`. That covers the
+  # three Active Storage tables and Rails' own `schema_migrations` and
+  # `ar_internal_metadata` as well as this app's three — a table prefix would
+  # have reached only the ones someone remembered to prefix.
+  #
+  # `public` is load-bearing, not habit: the `vector` extension installs there
+  # and cannot be relocated afterwards, so dropping it from this path makes every
+  # embedding column fail to resolve its type.
+  #
+  # Set here rather than in the connection URL because Render injects its own
+  # DATABASE_URL. A URL without a search path does not override this one.
+  schema_search_path: pdfrag,public
+
 development:
   <<: *default
   database: pdf_rag_development
