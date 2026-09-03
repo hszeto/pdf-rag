@@ -30,9 +30,17 @@ class GeminiClient
   # loudly instead of quietly reaching the live API.
   mattr_accessor :transport_factory, default: -> { NetHttpTransport.new }
 
+  # Where the key comes from, as a seam for the same reason the transport is one.
+  #
+  # A client refuses to build without a key, before the transport is consulted at
+  # all — so a suite whose transports are all fakes still cannot run anywhere the
+  # credentials will not decrypt. That is every CI runner, which has no master
+  # key. Overridden in test_helper with a value that is never sent anywhere.
+  mattr_accessor :api_key_source, default: -> { Rails.application.credentials.gemini_api_key }
+
   def initialize(transport: nil, api_key: nil)
     @transport = transport || transport_factory.call
-    @api_key = api_key || Rails.application.credentials.gemini_api_key
+    @api_key = api_key || api_key_source.call
   end
 
 
