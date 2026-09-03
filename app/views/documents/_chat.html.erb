@@ -1,26 +1,49 @@
-<%# Questions about the document. Answers carry where they came from, so a
-    reader can check rather than take them on trust. %>
+<%# Questions about the document, laid out as a conversation: the reader's own
+    words on the right, the answer on the left (D4). No avatars and no
+    timestamps — a time would have to be rendered in the server's zone, which is
+    the very thing the retention countdown exists to avoid (D4, R2.7).
+
+    Attribution is text, not colour or position, so it survives a screen reader
+    and a monochrome display alike (R2.6). The list stays an <ol> for the same
+    reason: the order of an exchange is meaning, not decoration.
+
+    Answers carry where they came from, so a reader can check rather than take
+    them on trust. %>
 <section aria-labelledby="ask-heading" class="mb-10">
   <h2 id="ask-heading" class="text-lead font-bold mb-5">Ask about this document</h2>
 
   <% if document.messages.any? %>
-    <ol class="mb-8 space-y-5 list-none">
+    <ol class="mb-8 space-y-4 list-none">
       <% document.messages.ordered.each do |message| %>
-        <li class="<%= message.asked? ? "sm:ml-12" : "sm:mr-12" %>">
-          <p class="text-body text-ink-muted mb-1">
-            <%= message.asked? ? "You asked" : "Answer" %>
-          </p>
-          <div class="rounded-lg p-5 text-lead <%= message.asked? ? "bg-notice-bg text-notice-ink" : "border-2 border-rule" %>">
-            <%= message.content %>
-          </div>
-          <% if message.answered? && message.citations.any? %>
-            <p class="text-body text-ink-muted mt-2">
-              From <%= message.citations.to_sentence %> of your document.
+        <%# The id is what MessagesController redirects to, so asking a question
+            lands the reader on the answer rather than the top of the page (R2.3). %>
+        <li id="<%= dom_id(message) %>" class="flex <%= message.asked? ? "justify-end" : "justify-start" %>">
+          <div class="max-w-[85%] sm:max-w-[75%]">
+            <p class="text-body text-ink-muted mb-1 <%= "text-right" if message.asked? %>">
+              <%= message.asked? ? "User" : "AI" %>
             </p>
-          <% end %>
+
+            <%# Both colour pairs are already asserted for contrast in
+                PaletteTest; break-words keeps a long unbroken string from
+                widening the page, which the no-sideways-scroll test guards. %>
+            <div class="rounded-2xl p-5 text-lead break-words <%=
+                  message.asked? ? "bg-notice-bg text-notice-ink rounded-br-sm" : "border-2 border-rule rounded-bl-sm" %>">
+              <%= message.content %>
+            </div>
+
+            <% if message.answered? && message.citations.any? %>
+              <p class="text-body text-ink-muted mt-2">
+                From <%= message.citations.to_sentence %> of your document.
+              </p>
+            <% end %>
+          </div>
         </li>
       <% end %>
     </ol>
+  <% else %>
+    <p class="text-body text-ink-muted mb-8">
+      No questions yet. Ask anything about what this document says.
+    </p>
   <% end %>
 
   <%= form_with url: document_messages_path(document), method: :post do |form| %>
