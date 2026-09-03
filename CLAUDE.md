@@ -30,6 +30,9 @@ bin/rails retention:sweep             # remove expired documents and orphaned fi
 - **PostgreSQL 14** with **pgvector**. Homebrew's `pgvector` bottle only ships for
   postgresql@17/@18; on pg14 it must be built from source against `pg_config`. The
   extension is enabled by a migration, so a fresh `db:migrate` sets it up.
+- **All tables live in the `pdfrag` schema**, not `public`, so this app can share one
+  database with others. `schema_search_path: pdfrag,public` in `database.yml`; the
+  schema is created by `db:ensure_schema`, hooked onto `db:migrate` and `db:prepare`.
 - **Redis** — cache on DB 0, Action Cable DB 1, Sidekiq DB 2. `brew services start redis`.
 - **`gemini_api_key` in Rails encrypted credentials.** Models: `gemini-2.5-flash` for
   generation, `gemini-embedding-001` (3072 dimensions) for vectors.
@@ -64,6 +67,11 @@ links — blocking on either would reject the most representative document avail
 
 ## Things that will bite
 
+- **A missing Postgres schema fails silently.** `search_path` is `pdfrag,public`, and
+  Postgres *skips* an entry that does not exist rather than erroring — so without the
+  `pdfrag` schema the app creates its tables in `public`, beside every other app
+  sharing the database, and says nothing. `db:ensure_schema` exists to make that
+  impossible; `DatabaseNamespaceTest` exists to notice if it ever becomes possible again.
 - **No mocking library.** Minitest 6 dropped `Minitest::Mock`; there is no webmock. Every
   external seam is injected. `test_helper.rb` makes any unstubbed Gemini call raise, so a
   forgotten stub fails loudly instead of making a real billed call.
@@ -83,6 +91,7 @@ links — blocking on either would reject the most representative document avail
 ## Layout
 
 ```
+lib/              database_schema_namespace (the pdfrag schema), tasks/
 app/services/     pdf_safety_{scanner,policy}, pdf_extraction_service, text_chunker,
                   embedding_batches, chunk_retriever, document_summarizer,
                   question_answerer, gemini_client, processing_error

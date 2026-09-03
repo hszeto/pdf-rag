@@ -2,6 +2,20 @@
 
 Notable changes to this project.
 
+## [0.1.1] - 2026-09-03
+
+### Changed
+
+- **All tables moved into a dedicated `pdfrag` Postgres schema** so the app can share
+  one database with other applications. This covers its own three tables, Active
+  Storage's three, and Rails' `schema_migrations` and `ar_internal_metadata` — the two
+  that make a shared database dangerous rather than merely crowded. No table was
+  renamed, no model changed, and no migration was edited; isolation comes from
+  `schema_search_path` in `config/database.yml`.
+- `db:ensure_schema` creates the schema, hooked onto `db:migrate` and `db:prepare`.
+  A missing schema does not raise in Postgres — `search_path` falls through to
+  `public` — so creating it is automatic rather than a documented step.
+
 ## [0.1.0] - 2026-09-02
 
 ### Added — any-PDF retrieval
