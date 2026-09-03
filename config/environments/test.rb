@@ -56,6 +56,6 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
-  # Uploaded documents live on local disk for the hour they are kept.
+  # Uploaded documents live on local disk for the window they are kept.
   config.active_storage.service = :test
 end

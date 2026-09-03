@@ -8,7 +8,7 @@ class DocumentScreensTest < ApplicationSystemTestCase
     visit root_path
 
     assert_selector "h1", text: "Understand any document"
-    assert_text(/one hour after you add it/i)
+    assert_text(/#{Document::RETENTION.inspect} after you add it/i)
     assert_selector "input[type=file]"
 
     too_small = page.evaluate_script(<<~JS)

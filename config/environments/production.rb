@@ -88,6 +88,6 @@ Rails.application.configure do
   #
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
-  # Uploaded documents live on local disk for the hour they are kept.
+  # Uploaded documents live on local disk for the window they are kept.
   config.active_storage.service = :local
 end

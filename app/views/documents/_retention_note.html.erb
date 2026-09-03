@@ -1,13 +1,16 @@
-<%# D3: the app keeps documents for an hour, and says so rather than leaving it
+<%# D3: the app states how long it keeps a document rather than leaving it
     implied. Unlike its predecessor this app writes files to disk, so the
-    promise is worth stating precisely. %>
+    promise is worth stating precisely.
+
+    The period comes from Document::RETENTION so the promise and the behaviour
+    cannot drift apart. %>
 <p class="text-body text-ink-muted">
   <% if document %>
     We remove this document, and everything we worked out from it, at
     <strong><%= document.expires_at.strftime("%-l:%M %p") %></strong> —
-    one hour after you added it.
+    <%= Document::RETENTION.inspect %> after you added it.
   <% else %>
-    We remove your document, and everything we work out from it, one hour after
-    you add it.
+    We remove your document, and everything we work out from it,
+    <%= Document::RETENTION.inspect %> after you add it.
   <% end %>
 </p>

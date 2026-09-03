@@ -1,4 +1,4 @@
-# Removes a document once its hour is up.
+# Removes a document once its window is up.
 #
 # The deletion is not what makes the promise true — `Document.live` already
 # hides anything past its expiry, so a job that never runs cannot expose a

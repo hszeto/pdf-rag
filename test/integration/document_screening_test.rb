@@ -131,7 +131,7 @@ class DocumentScreeningTest < ActionDispatch::IntegrationTest
     assert_select "h1"
   end
 
-  # Retention is a property of the data, so a document past its hour is gone as
+  # Retention is a property of the data, so a document past its window is gone as
   # far as the app is concerned whether or not anything has deleted it.
   test "an expired document is not reachable" do
     post_pdf HostilePdfs.benign_document_pdf

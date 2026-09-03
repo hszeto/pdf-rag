@@ -1,7 +1,7 @@
 # PdfRag
 
 Upload a PDF, get a short summary of what it is, and ask questions answered from the
-parts of it that matter. Documents are kept for one hour and then removed.
+parts of it that matter. Documents are kept for thirty minutes and then removed.
 
 The document itself is never sent to a language model. It is split into overlapping
 passages, each embedded into Postgres, and only the few passages relevant to a question
@@ -94,7 +94,7 @@ development only — it exposes job arguments and has no authentication in front
 
 ## Retention
 
-Documents, their passages and their uploaded files are removed one hour after upload.
+Documents, their passages and their uploaded files are removed thirty minutes after upload.
 Two things enforce that:
 
 - **`expires_at`**, which every read scopes to, so an expired document is unreachable
@@ -144,7 +144,7 @@ Two free-tier consequences are worth knowing before you rely on the URL:
 - **The service spins down after 15 minutes** of no traffic and takes about a minute to
   wake, which the processing screen will sit through.
 
-Neither costs you data that was meant to survive: documents are gone after an hour by
+Neither costs you data that was meant to survive: documents are gone after thirty minutes by
 design, and an ephemeral filesystem that discards uploads on restart only enforces that
 sooner. `Document.live` scopes every read to `expires_at`, so an expired document is
 unreachable even though no cron job runs the sweep — cron is paid-only too, and the

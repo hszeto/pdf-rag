@@ -1,12 +1,19 @@
 require "test_helper"
 
 class RetentionTest < ActionDispatch::IntegrationTest
+  # The period itself, pinned. Every other assertion here derives from the
+  # constant, so without this one a change to it would quietly rewrite the
+  # promise and still pass.
+  test "documents are kept for thirty minutes" do
+    assert_equal 30.minutes, Document::RETENTION
+  end
+
   # D3: the promise is stated, not implied. This app writes files to disk, which
   # its predecessor never did.
   test "the upload page says how long a document is kept" do
     get root_path
 
-    assert_select "p", /one hour after you add it/i
+    assert_select "p", /#{Document::RETENTION.inspect} after you add it/i
   end
 
   test "the document page names the time it will be removed" do
@@ -14,11 +21,11 @@ class RetentionTest < ActionDispatch::IntegrationTest
 
     get document_path(document)
 
-    assert_select "p", /one hour after you added it/i
+    assert_select "p", /#{Document::RETENTION.inspect} after you added it/i
     assert_select "strong", text: document.expires_at.strftime("%-l:%M %p")
   end
 
-  test "uploading schedules the removal for an hour later" do
+  test "uploading schedules the removal for one retention window later" do
     assert_enqueued_with(job: DeleteDocumentJob) do
       post documents_path, params: {
         document: Rack::Test::UploadedFile.new(HostilePdfs.benign_document_pdf, "application/pdf")

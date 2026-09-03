@@ -31,14 +31,14 @@ class DocumentsController < ApplicationController
 
   private
     def load_document
-      # Scoped to live documents, so one past its hour is gone as far as the app
+      # Scoped to live documents, so one past its window is gone as far as the app
       # is concerned whether or not the sweep has caught up.
       @document = Document.live.find_by(id: params[:id])
       redirect_to root_path, alert: expired_message if @document.nil?
     end
 
     def expired_message
-      "That document has been removed. Documents are kept for one hour."
+      "That document has been removed. Documents are kept for #{Document::RETENTION.inspect}."
     end
 
     def store(file, scan)

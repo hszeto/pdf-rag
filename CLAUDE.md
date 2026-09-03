@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `PdfRag` — upload a PDF, have it screened for hostile content, chunked and embedded
 into Postgres, then ask questions answered from the passages that matter rather than
-from the whole document. Documents are kept for **one hour**, then removed.
+from the whole document. Documents are kept for **thirty minutes**, then removed.
 
 The `mvp` branch holds a superseded insurance-specific version of this app. It is a
 working reference, not dead code — several services here came from it unchanged.
@@ -69,7 +69,7 @@ request at 100 items, but the free tier rejects on a per-minute token budget lon
 before that. Batching by count builds requests it refuses every time.
 
 **Retention is a column, not a job.** `Document.live` scopes every read to
-`expires_at`, so a document past its hour is unreachable whether or not anything has
+`expires_at`, so a document past its window is unreachable whether or not anything has
 deleted it. `DeleteDocumentJob` and the sweep only free bytes. Purging is synchronous —
 Active Storage's `purge_later` would leave the file on disk if that second job were lost.
 

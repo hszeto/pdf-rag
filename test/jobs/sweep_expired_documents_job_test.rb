@@ -34,7 +34,7 @@ class SweepExpiredDocumentsJobTest < ActiveSupport::TestCase
 
 
   # A deletion that did not finish leaves the row gone and the file behind,
-  # which is precisely what the hour exists to prevent.
+  # which is precisely what the retention window exists to prevent.
   test "orphaned files are purged" do
     blob = ActiveStorage::Blob.create_and_upload!(
       io: File.open(file_fixture("insurance_sample.pdf")),

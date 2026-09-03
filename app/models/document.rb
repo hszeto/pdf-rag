@@ -9,7 +9,7 @@ has_one_attached :file
   # Active Storage's default is purge_later, which enqueues a second job to
   # delete the file. For a retention promise that is too weak a guarantee: if
   # that job is lost the record is gone while the document is still sitting on
-  # disk, which is precisely the thing the hour is supposed to prevent.
+  # disk, which is precisely the thing the retention window is supposed to prevent.
   def remove!
     file.purge
     destroy!
@@ -17,7 +17,9 @@ has_one_attached :file
   has_many :chunks, class_name: "DocumentChunk", dependent: :destroy
   has_many :messages, dependent: :destroy
 
-  RETENTION = 1.hour
+  # Written in the unit readers should be told about: the copy derives from this
+  # constant rather than repeating it, so the two can never drift apart.
+  RETENTION = 30.minutes
 
   STATUSES = %w[pending extracting embedding summarizing ready failed].freeze
   validates :status, inclusion: { in: STATUSES }
@@ -25,7 +27,7 @@ has_one_attached :file
   before_validation :set_expiry, on: :create
 
   # Retention is a property of the data, not a promise the sweep job keeps.
-  # Every read goes through this, so a document past its hour is invisible even
+  # Every read goes through this, so a document past its window is invisible even
   # if nothing has deleted it yet.
   scope :live, -> { where(expires_at: Time.current..) }
   scope :expired, -> { where(expires_at: ..Time.current) }

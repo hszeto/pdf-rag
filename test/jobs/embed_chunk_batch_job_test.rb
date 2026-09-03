@@ -168,14 +168,14 @@ class EmbedChunkBatchJobTest < ActiveSupport::TestCase
   end
 
 
-  # Retrying must fit inside the hour a document is kept. Rails' polynomial
-  # backoff spaced six attempts across 38 minutes — most of that hour — to wait
-  # out a budget that resets every sixty seconds.
+  # Retrying must fit inside the window a document is kept. Rails' polynomial
+  # backoff spaced six attempts across 38 minutes — longer than that window now —
+  # to wait out a budget that resets every sixty seconds.
   test "the retry schedule fits comfortably inside a document's life" do
     total = EmbedChunkBatchJob::RETRY_WAIT * 5
 
     assert_operator total, :<, Document::RETENTION / 4,
-      "retries should not consume a meaningful share of the document's hour"
+      "retries should not consume a meaningful share of the document's life"
   end
 
   test "the wait is at least one rate-limit window" do

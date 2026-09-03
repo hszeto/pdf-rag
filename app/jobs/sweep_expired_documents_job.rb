@@ -30,7 +30,7 @@ class SweepExpiredDocumentsJob < ApplicationJob
 
     # Files whose document is gone but which were never purged — the residue of
     # a deletion that did not finish. Without this the row disappears while the
-    # uploaded document stays on disk, which is exactly what the hour is meant
+    # uploaded document stays on disk, which is exactly what the window is meant
     # to prevent.
     def remove_orphaned_files
       orphans = ActiveStorage::Blob.unattached.where(created_at: ..ORPHAN_GRACE.ago)
