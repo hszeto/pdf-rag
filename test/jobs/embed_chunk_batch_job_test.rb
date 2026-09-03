@@ -13,10 +13,24 @@ class EmbedChunkBatchJobTest < ActiveSupport::TestCase
     end
   end
 
-  test "the document becomes ready once nothing is left to embed" do
+  # Embedding hands off to summarising rather than declaring the document done:
+  # the passages are searchable, but the reader has not been told what they are.
+  test "the document moves to summarising once nothing is left to embed" do
     perform(@document.chunks.pluck(:id), vectors: 5)
 
-    assert_equal "ready", @document.reload.status
+    assert_equal "summarizing", @document.reload.status
+  end
+
+  test "the last batch queues the summary" do
+    assert_enqueued_with(job: SummarizeDocumentJob, args: [ @document.id ]) do
+      perform(@document.chunks.pluck(:id), vectors: 5)
+    end
+  end
+
+  test "an unfinished document does not queue a summary" do
+    assert_no_enqueued_jobs only: SummarizeDocumentJob do
+      perform(@document.chunks.ordered.limit(2).pluck(:id), vectors: 2)
+    end
   end
 
   # The database is the coordinator: whichever batch finds nothing left is the
@@ -37,7 +51,7 @@ class EmbedChunkBatchJobTest < ActiveSupport::TestCase
     assert_equal "embedding", @document.reload.status
 
     perform(ordered.drop(2), vectors: 3)
-    assert_equal "ready", @document.reload.status
+    assert_equal "summarizing", @document.reload.status
   end
 
   # Vectors come back positionally, so the wrong order would attach one
@@ -96,7 +110,7 @@ class EmbedChunkBatchJobTest < ActiveSupport::TestCase
     perform(ids, vectors: 5)
 
     assert_equal 0, @document.reload.chunks_awaiting_embedding.count
-    assert_equal "ready", @document.reload.status
+    assert_equal "summarizing", @document.reload.status
   end
 
   test "chunks already embedded are not embedded again" do
@@ -150,7 +164,7 @@ class EmbedChunkBatchJobTest < ActiveSupport::TestCase
       assert_equal 0, fake.call_count, "nothing left to embed, so nothing should be sent"
     end
 
-    assert_equal "ready", @document.reload.status
+    assert_equal "summarizing", @document.reload.status
   end
 
 

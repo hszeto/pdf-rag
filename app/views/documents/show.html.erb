@@ -10,8 +10,19 @@
 <% elsif @document.failed? %>
   <%= render "documents/error", message: @document.failure_reason %>
 <% else %>
-  <p class="text-lead mb-8">
-    Ready — <%= pluralize(@document.chunks.count, "passage") %>.
+  <% if @document.summary.present? %>
+    <section class="mb-10">
+      <h2 class="text-lead font-bold mb-3">What this document is</h2>
+      <ul class="text-body list-disc pl-6 space-y-2">
+        <% @document.summary.split("\n").each do |point| %>
+          <li><%= point %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <p class="text-body text-ink-muted mb-8">
+    <%= pluralize(@document.chunks.count, "passage") %> ready to search.
   </p>
 <% end %>
 

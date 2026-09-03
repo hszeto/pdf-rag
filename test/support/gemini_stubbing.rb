@@ -16,4 +16,15 @@ module GeminiStubbing
   def gemini_embeddings(count, dimensions: GeminiClient::EMBEDDING_DIMENSIONS)
     { "embeddings" => Array.new(count) { { "values" => Array.new(dimensions) { 0.01 } } } }
   end
+
+  # A generateContent response carrying a JSON payload, which the API nests
+  # inside candidates/content/parts as a string.
+  def gemini_generation(payload)
+    { "candidates" => [ { "content" => { "parts" => [ { "text" => payload.to_json } ] } } ] }
+  end
+
+  # A summary response, overridable per test.
+  def gemini_summary(bullets: [ "It is a health plan document.", "It lists what you pay." ], title: "A Plan")
+    gemini_generation({ "title" => title, "bullets" => bullets })
+  end
 end

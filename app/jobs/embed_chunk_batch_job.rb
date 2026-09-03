@@ -55,7 +55,8 @@ class EmbedChunkBatchJob < ApplicationJob
     def finish(document)
       return if document.chunks_awaiting_embedding.exists?
 
-      document.update!(status: "ready")
-      Rails.logger.info("[embed] document=#{document.id} ready with #{document.chunks.count} passages")
+      document.update!(status: "summarizing")
+      Rails.logger.info("[embed] document=#{document.id} embedded #{document.chunks.count} passages")
+      SummarizeDocumentJob.perform_later(document.id)
     end
 end

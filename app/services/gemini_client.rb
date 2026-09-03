@@ -50,6 +50,31 @@ class GeminiClient
     EmbeddingBatches.for(texts).flat_map { |batch| embed_batch(batch) }
   end
 
+
+  # A generation call that returns JSON matching a schema. Structured output is
+  # what keeps prose and code fences out of the response, so the caller parses a
+  # document rather than guessing at one.
+  def generate(prompt, schema:)
+    body = post("#{MODEL}:generateContent", {
+      contents: [ { parts: [ { text: prompt } ] } ],
+      generationConfig: generation_config.merge(
+        responseMimeType: "application/json",
+        responseSchema: schema
+      )
+    })
+
+    text = body.dig("candidates", 0, "content", "parts", 0, "text")
+
+    # An overloaded model answers 200 with no candidate, no finishReason and no
+    # error status. Observed live. Without this it becomes a confusing nil chase
+    # rather than a message someone can act on.
+    raise ProcessingError::ServiceUnavailable, "empty response" if text.blank?
+
+    JSON.parse(text)
+  rescue JSON::ParserError => e
+    raise ProcessingError::ServiceUnavailable, "unparseable generation: #{e.message}"
+  end
+
   private
     def embed_batch(texts)
       body = post("#{EMBEDDING_MODEL}:batchEmbedContents", {

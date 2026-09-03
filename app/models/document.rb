@@ -6,7 +6,7 @@ class Document < ApplicationRecord
 
   RETENTION = 1.hour
 
-  STATUSES = %w[pending extracting embedding ready failed].freeze
+  STATUSES = %w[pending extracting embedding summarizing ready failed].freeze
   validates :status, inclusion: { in: STATUSES }
 
   before_validation :set_expiry, on: :create
@@ -22,7 +22,7 @@ class Document < ApplicationRecord
     define_method("#{state}?") { status == state }
   end
 
-  def processing? = %w[pending extracting embedding].include?(status)
+  def processing? = %w[pending extracting embedding summarizing].include?(status)
 
   def fail!(reason)
     update!(status: "failed", failure_reason: reason)
