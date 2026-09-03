@@ -27,4 +27,9 @@ module GeminiStubbing
   def gemini_summary(bullets: [ "It is a health plan document.", "It lists what you pay." ], title: "A Plan")
     gemini_generation({ "title" => title, "bullets" => bullets })
   end
+
+  # An answer response, overridable per test.
+  def gemini_answer(text: "The deductible is $1,500.", found: true, used: [ 1 ])
+    gemini_generation({ "answer" => text, "found_in_context" => found, "used_passages" => used })
+  end
 end

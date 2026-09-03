@@ -3,6 +3,7 @@ class Document < ApplicationRecord
   # has already been judged safe to open.
   has_one_attached :file
   has_many :chunks, class_name: "DocumentChunk", dependent: :destroy
+  has_many :messages, dependent: :destroy
 
   RETENTION = 1.hour
 

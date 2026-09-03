@@ -81,6 +81,10 @@ class Unsafe < ProcessingError
   end
 end
 
+class NotReady < ProcessingError
+  def user_message = "We are still reading this document. Please try again in a moment."
+end
+
   class ServiceUnavailable < ProcessingError
     def user_message = "We are having trouble reading documents right now. Please try again in a moment."
   end
