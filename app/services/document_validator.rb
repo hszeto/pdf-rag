@@ -4,7 +4,10 @@
 # spend anything on it: presence, then size (from the tempfile's stat, without
 # reading it), then the magic header (five bytes).
 class DocumentValidator
-  MAX_BYTES = 15.megabytes
+  # Sized for the container, not for what a PDF might reasonably be. Screening
+  # parses the whole file in the web process, on 512 MB shared with Sidekiq, so
+  # the ceiling has to hold when the box is busy rather than when it is idle.
+  MAX_BYTES = 8.megabytes
   PDF_MAGIC = "%PDF-".b.freeze
 
   def initialize(file)

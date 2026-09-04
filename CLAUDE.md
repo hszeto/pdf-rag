@@ -127,8 +127,14 @@ skill before starting a feature; the parts that catch people out:
   Anything held in `connect()` resets before it can fire.
 - **`allow_browser versions: :modern`** returns 406 to older browsers.
 - **Brakeman runs with `--exit-on-warn`** — any warning fails `bin/ci`.
-- **The Gemini free tier's daily cap** is exhausted by embedding roughly one large
-  document. This blocked verification repeatedly during development.
+- **Uploads and questions are rate limited per visitor** — five documents an hour,
+  twenty questions a minute — and the limiter *fails closed*: if the counter store
+  is unreachable the request is refused rather than admitted. See
+  `FailClosedStore` for why Rails' own behaviour is the opposite.
+- **`request.remote_ip` needs Cloudflare's ranges** to be the visitor rather than
+  Render's edge. They are listed in `config/application.rb` with the date they
+  were taken; if Cloudflare adds a range, every visitor behind it shares one
+  rate-limit bucket again.
 
 ## Layout
 

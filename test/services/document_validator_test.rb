@@ -25,6 +25,17 @@ class DocumentValidatorTest < ActiveSupport::TestCase
 
   # AC 8: size comes from the tempfile's stat, so an oversized file is refused
   # without its contents ever being read.
+  # The number moved once already, so the copy derives from the constant. Both
+  # halves are asserted: that they agree, and what the value currently is — a
+  # derived message alone would follow any change silently.
+  test "the refusal names the current limit" do
+    message = ProcessingError::TooLarge.new.user_message
+
+    assert_includes message,
+      ActiveSupport::NumberHelper.number_to_human_size(DocumentValidator::MAX_BYTES)
+    assert_equal 8.megabytes, DocumentValidator::MAX_BYTES
+  end
+
   test "rejects a file over the limit without reading it" do
     reads = 0
     oversized = Struct.new(:size, :tempfile) do

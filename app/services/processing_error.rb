@@ -20,8 +20,11 @@ class ProcessingError < StandardError
   end
 
   class TooLarge < ProcessingError
+    # Derived rather than repeated: the number moved once already, and copy that
+    # states a limit should not be able to disagree with the limit.
     def user_message
-      "That file is too big for us to read. Please add a file smaller than 15 MB."
+      "That file is too big for us to read. Please add a file smaller than " \
+      "#{ActiveSupport::NumberHelper.number_to_human_size(DocumentValidator::MAX_BYTES)}."
     end
   end
 
