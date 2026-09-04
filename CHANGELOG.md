@@ -22,6 +22,31 @@ Notable changes to this project.
   what keeps the browser's `required` check working; collapsing the box makes
   Chrome refuse to submit while reporting it only to the console.
 
+### Security
+
+- **Documents are addressed by an unguessable token, not their id.** Ids were
+  sequential, so `/documents/40` and `/documents/41` belonged to different people
+  and either could open the other's summary, scan notes and whole conversation.
+  The id stays internal — every job still passes it across the queue.
+
+### Added
+
+- **Rate limiting per visitor**: five documents an hour, twenty questions a
+  minute. The limiter fails closed, refusing rather than admitting when the
+  counter store is unreachable — Rails' own behaviour is the opposite, and would
+  switch limiting off exactly when the cache is unwell.
+
+### Fixed
+
+- **`request.remote_ip` is the visitor again.** Render fronts every service with
+  Cloudflare, whose ranges Rails does not know, so every request was logged and
+  counted as coming from a Cloudflare edge.
+
+### Changed
+
+- Uploads are capped at 8 MB, down from 15 MB, sized for a 512 MB container that
+  parses the whole file in the web process.
+
 ## [0.2.0] - 2026-09-03
 
 ### Changed

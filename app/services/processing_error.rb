@@ -8,6 +8,11 @@
 class ProcessingError < StandardError
   def user_message = "Something went wrong. Please try again."
 
+  # The status travels with the error for the same reason the copy does: two
+  # controllers rescue this class, and neither should have to know which failure
+  # deserves which code.
+  def status = :unprocessable_entity
+
   class NotAPdf < ProcessingError
     def user_message
       "We can only read PDF files right now. Please add your document as a PDF."
@@ -15,13 +20,47 @@ class ProcessingError < StandardError
   end
 
   class TooLarge < ProcessingError
+    # Derived rather than repeated: the number moved once already, and copy that
+    # states a limit should not be able to disagree with the limit.
     def user_message
-      "That file is too big for us to read. Please add a file smaller than 15 MB."
+      "That file is too big for us to read. Please add a file smaller than " \
+      "#{ActiveSupport::NumberHelper.number_to_human_size(DocumentValidator::MAX_BYTES)}."
     end
   end
 
   class Missing < ProcessingError
     def user_message = "We did not get a file. Please choose your document and try again."
+  end
+
+  # Asking for more than a visitor's share. Separate classes for documents and
+  # questions because the windows differ, and because a log should say which
+  # ceiling was reached without parsing a sentence.
+  class TooManyDocuments < ProcessingError
+    def user_message
+      "That is a lot of documents in a short time. Please wait a little and try again."
+    end
+
+    def status = :too_many_requests
+  end
+
+  class TooManyQuestions < ProcessingError
+    def user_message
+      "That is a lot of questions in a short time. Please wait a little and try again."
+    end
+
+    def status = :too_many_requests
+  end
+
+  # The counter itself is unreachable, so nothing can be counted. Refusing is a
+  # deliberate choice (D9): admitting the request would mean no ceiling at all,
+  # and the reader would never know. 503 rather than 429 — the visitor did
+  # nothing wrong, we simply cannot keep count.
+  class LimiterUnavailable < ProcessingError
+    def user_message
+      "We cannot take that just now. Please try again in a moment."
+    end
+
+    def status = :service_unavailable
   end
 
   class Locked < ProcessingError

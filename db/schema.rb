@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_000000) do
   create_schema "pdfrag"
 
   # These are extensions that must be enabled in order to support this database
@@ -67,9 +67,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_010000) do
     t.string "status", default: "pending", null: false
     t.text "summary"
     t.string "title"
+    t.string "token", null: false
     t.datetime "updated_at", null: false
     t.index ["content_hash"], name: "index_documents_on_content_hash"
     t.index ["expires_at"], name: "index_documents_on_expires_at"
+    t.index ["token"], name: "index_documents_on_token", unique: true
   end
 
   create_table "pdfrag.messages", force: :cascade do |t|

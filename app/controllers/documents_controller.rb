@@ -1,6 +1,17 @@
 class DocumentsController < ApplicationController
   before_action :load_document, only: :show
 
+  # Uploading is the expensive request: it embeds every chunk of a document, and
+  # on a 512 MB box it parses the whole file in the web process before that.
+  # Five an hour is more than a reader needs and less than a script wants.
+  #
+  # Only :create — reading is free, and the processing screen polls #show every
+  # few seconds while a document is read.
+  rate_limit to: 5, within: 1.hour, only: :create,
+             by: -> { RateLimitKey.for(request.remote_ip) },
+             store: FailClosedStore.new,
+             with: -> { raise ProcessingError::TooManyDocuments }
+
   def new
   end
 
@@ -33,7 +44,7 @@ class DocumentsController < ApplicationController
     def load_document
       # Scoped to live documents, so one past its window is gone as far as the app
       # is concerned whether or not the sweep has caught up.
-      @document = Document.live.find_by(id: params[:id])
+      @document = Document.live.find_by(token: params[:id])
       redirect_to root_path, alert: expired_message if @document.nil?
     end
 

@@ -19,6 +19,12 @@ has_one_attached :file
 
   # Written in the unit readers should be told about: the copy derives from this
   # constant rather than repeating it, so the two can never drift apart.
+  # The URL carries this, never the primary key: ids are sequential, so one
+  # reader could reach another's document by counting. The id remains the
+  # internal identifier — it is what every job passes across the queue.
+  has_secure_token
+  def to_param = token
+
   RETENTION = 30.minutes
 
   STATUSES = %w[pending extracting embedding summarizing ready failed].freeze

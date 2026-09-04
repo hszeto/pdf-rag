@@ -150,11 +150,32 @@ sooner. `Document.live` scopes every read to `expires_at`, so an expired documen
 unreachable even though no cron job runs the sweep — cron is paid-only too, and the
 commented-out block in `render.yaml` is there for when it is not.
 
-## A caution about the free tier
+## Limits
 
-The Gemini free tier's daily request cap is exhausted by embedding roughly one large
-document. That is enough to build and test with, and not enough to demo reliably.
-Enabling billing on the same project raises it with no code change.
+Two ceilings, both per visitor, both counted in the cache:
+
+- **Five documents an hour.** Uploading is the expensive request — it embeds every
+  chunk, and screens the whole file in the web process first.
+- **Twenty questions a minute.** A question costs one embedding and one generation.
+
+Generous for someone reading a document, tedious for a script. The app has no
+accounts, so an address is the only thing to count against; `RateLimitKey` masks
+IPv6 to its /64, because a subscriber is handed the whole block.
+
+**The limiter fails closed.** Rails treats an unreachable counter store as "no
+limit", which would switch rate limiting off exactly when the cache is unwell.
+`FailClosedStore` refuses instead. The cost is real: a sick cache refuses
+legitimate uploads, and on a free Key Value instance that will happen for reasons
+unrelated to abuse.
+
+Identifying the visitor needs Cloudflare's IP ranges, listed in
+`config/application.rb`. Render fronts every service with Cloudflare, so without
+them `request.remote_ip` is the edge and every visitor shares one bucket. The list
+has an upstream owner — if it drifts, the failure is over-throttling rather than
+anything exploitable.
+
+Uploads are capped at 8 MB (`DocumentValidator::MAX_BYTES`), sized for a 512 MB
+container that parses the whole PDF in the web process.
 
 ## Tests
 

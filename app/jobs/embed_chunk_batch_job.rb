@@ -11,10 +11,11 @@
 class EmbedChunkBatchJob < ApplicationJob
   queue_as :default
 
-  # Rate limits are the expected case here, not an exception: the free tier
-  # rejects on a per-minute token budget. Retrying is the whole reason batches
-  # are separate jobs — failing the document on a transient 429 would throw away
-  # the work that already succeeded.
+  # Rate limits are a case to expect rather than an exception: the API rejects on
+  # a per-minute token budget. That budget is much larger on the paid tier than
+  # on the free one these retries were written against, so a 429 here is now
+  # unusual — but retrying is still the whole reason batches are separate jobs.
+  # Failing the document on a transient 429 would throw away work that succeeded.
   #
   # The wait is deliberately flat and roughly one window long. Rails' polynomial
   # backoff would space six attempts across 38 minutes, which is most of the

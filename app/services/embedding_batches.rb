@@ -5,6 +5,11 @@
 # chunks (up to ~13,000 tokens) all succeed; a request of 100 chunks (~65,000
 # tokens) does not.
 #
+# Those measurements were taken on the free tier, whose per-minute budget was far
+# tighter than the paid one now in use. Batching by tokens is kept regardless: the
+# ceiling moved, it did not disappear, and a request sized by item count would
+# still be the wrong shape.
+#
 # The tighter constraint is a *per-minute* token budget rather than a per-request
 # one. An earlier reading of this was wrong: those probes were three seconds
 # apart and were exhausting the minute, not the request. Pacing is therefore the

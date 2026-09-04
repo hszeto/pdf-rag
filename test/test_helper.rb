@@ -25,6 +25,13 @@ module ActiveSupport
       # do not decrypt — which is every CI runner. Nothing is ever sent: the
       # transport above refuses, and stub_gemini replaces it with a fake.
       GeminiClient.api_key_source = -> { "test-key-never-sent" }
+
+      # Rate limit counters live in the cache, and every integration test shares
+      # one client address. Without this they accumulate across tests in the same
+      # worker, so a file that uploads more than the hourly allowance starts
+      # failing partway through — and whether it does depends on how the parallel
+      # split happened to fall, which is the worst kind of flake.
+      Rails.cache.clear
     end
 
     # Add more helper methods to be used by all tests here...
