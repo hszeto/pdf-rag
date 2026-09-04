@@ -1,5 +1,6 @@
 ---
 description: Phase 2 of ASDD — research and write an implementation plan for an approved feature spec.
+argument-hint: feature-spec md file
 ---
 
 # /feature-plan $ARGUMENTS
@@ -34,30 +35,36 @@ test/lint/build tooling actually exists in this project before assuming it.
 
 Write to `ai/plans/<name>.md`, matching the spec's slug.
 
+**Keep it scannable.** Bullets, not paragraphs. One line per bullet — if a
+design decision needs more, state the decision in one line and the reason in
+one more, then move on. No restating the spec. Omit any section that would be
+empty.
+
 Use this template:
 
 ```markdown
 # Plan: <name>
 
 ## Confirmed Decisions
-<the spec's resolved questions, restated as decisions — or "none raised">
+- <decision> — <one-line reason>
+  <or: "none raised">
 
 ## Approach
-<how this will be implemented, key design decisions>
+- <key design decision, one line each — 3-6 bullets>
 
 ## Files Touched
 - <path> — <what changes>
 
 ## Checkpoints
-1. <checkpoint>
+1. <one commit-sized unit of work, one line>
 2. ...
 
 ## Test Plan
-- <specific tests/cases to add or run, or note what tooling doesn't exist
-  and what needs manual verification instead>
+- <specific test/case to add or run>
+- <or: tooling that doesn't exist + what to verify manually instead>
 
 ## Risks / Rollback
-- ...
+- <risk> → <mitigation or how to undo>
 ```
 
 ## 4. Stop

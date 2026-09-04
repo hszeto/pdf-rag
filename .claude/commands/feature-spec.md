@@ -1,5 +1,6 @@
 ---
 description: Phase 0 + Phase 1 of ASDD — orient in the codebase, then write a feature spec for approval.
+argument-hint: Feature description
 ---
 
 # /feature-spec $ARGUMENTS
@@ -20,28 +21,32 @@ Requirement: "$ARGUMENTS"
 Write the spec to `ai/feature-specs/<name>.md`, where `<name>` is a short
 kebab-case slug derived from the requirement.
 
+**Keep it scannable.** Bullets, not paragraphs. One line per bullet. A whole
+spec should fit on one screen — if it doesn't, the feature is too big to spec
+in one file. Omit any section that would be empty; don't pad it with filler.
+
 Use this template:
 
 ```markdown
 # Feature Spec: <name>
 
 ## Summary
-<1-3 sentences>
+<1-2 sentences: what this does and who it's for>
 
 ## Requirements
-- ...
+- <one line each, testable>
 
 ## Non-Goals
-- ...
+- <one line each>
 
 ## Edge Cases
-- ...
+- <case> → <expected behavior>
 
 ## Acceptance Criteria
-- ...
+- <one line each, checkable as done/not done>
 
 ## Open Questions
-- <anything you need the user to clarify before this can be planned>
+- <question — one line, answerable without a paragraph back>
 ```
 
 If you have genuine ambiguity about requirements, put it in **Open Questions**

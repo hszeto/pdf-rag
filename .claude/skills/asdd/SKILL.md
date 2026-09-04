@@ -43,6 +43,11 @@ approved plan first. Two hard approval gates. Everything else follows from that.
 
 ## Principles
 
+- **Write short.** Spec and plan files are working documents someone has to
+  read and approve, not prose. Bullets over paragraphs, one line per bullet,
+  no restating what an earlier section already said. A spec or plan that
+  doesn't fit on one screen is a signal the feature should be split, not a
+  reason to keep writing. Leave a section out rather than padding it.
 - The approval gates after Phase 1 and Phase 2 are non-negotiable —
   implementation never begins without explicit sign-off on both the spec and
   the plan.
