@@ -13,6 +13,6 @@ class ApplicationController < ActionController::Base
   private
     def render_processing_error(error)
       flash.now[:alert] = error.user_message
-      render "documents/new", status: :unprocessable_entity
+      render "documents/new", status: error.status
     end
 end

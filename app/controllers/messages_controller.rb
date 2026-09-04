@@ -1,4 +1,12 @@
 class MessagesController < ApplicationController
+  # A question costs one embedding and one generation — far less than an upload,
+  # so the ceiling is looser. Twenty a minute is well past human typing speed and
+  # well short of what a loop would want.
+  rate_limit to: 20, within: 1.minute,
+             by: -> { RateLimitKey.for(request.remote_ip) },
+             store: FailClosedStore.new,
+             with: -> { raise ProcessingError::TooManyQuestions }
+
   def create
     document = Document.live.find_by(token: params[:document_id])
     raise ProcessingError::NoDocument if document.nil?
@@ -37,6 +45,6 @@ class MessagesController < ApplicationController
 
     # Explicitly HTML: the request may have asked for a stream, and Turbo replaces
     # the body of a 422 either way.
-    render "documents/show", status: :unprocessable_entity, formats: [ :html ]
+    render "documents/show", status: e.status, formats: [ :html ]
   end
 end

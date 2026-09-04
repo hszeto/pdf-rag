@@ -9,12 +9,12 @@
 # runs IngestDocumentJob, and typing a question runs QuestionAnswerer. Seed the
 # exchange instead of typing it and the daily cap stays intact.
 namespace :demo do
-  DIMENSIONS = 3072
+  DIMENSIONS = 3072 unless defined?(DIMENSIONS)
 
   # Stamped on every document this task creates, and the only thing demo:clear
   # will delete. content_hash otherwise holds a SHA256 of the extracted text, so
   # a real upload can never collide with this value.
-  SEED_MARKER = "demo-seed".freeze
+  SEED_MARKER = "demo-seed".freeze unless defined?(SEED_MARKER)
 
   desc "Create documents in every screen state, without calling Gemini"
   task seed: :environment do
