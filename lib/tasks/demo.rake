@@ -30,7 +30,8 @@ namespace :demo do
 
     puts "\nSeeded #{docs.size} documents:\n\n"
     docs.each do |label, document|
-      puts format("  %-26s http://localhost:3000/documents/%d", label, document.id)
+      # to_param, not id: the URL carries the token now.
+      puts format("  %-26s http://localhost:3000/documents/%s", label, document.to_param)
     end
     puts "\nRetention is #{Document::RETENTION.inspect}; the 'about to expire' one has " \
          "about a minute left.\n\n"

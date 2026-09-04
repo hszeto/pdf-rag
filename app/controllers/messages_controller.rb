@@ -1,6 +1,6 @@
 class MessagesController < ApplicationController
   def create
-    document = Document.live.find_by(id: params[:document_id])
+    document = Document.live.find_by(token: params[:document_id])
     raise ProcessingError::NoDocument if document.nil?
     raise ProcessingError::NotReady unless document.ready?
 

@@ -33,7 +33,7 @@ class DocumentsController < ApplicationController
     def load_document
       # Scoped to live documents, so one past its window is gone as far as the app
       # is concerned whether or not the sweep has caught up.
-      @document = Document.live.find_by(id: params[:id])
+      @document = Document.live.find_by(token: params[:id])
       redirect_to root_path, alert: expired_message if @document.nil?
     end
 
