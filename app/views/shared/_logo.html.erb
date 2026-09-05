@@ -1,0 +1,16 @@
+<%# The mark is the app's thesis in one glyph: a page with a single line picked
+    out. This app answers from the passages that matter rather than from the
+    whole document, and that is the one idea worth carrying in a logo.
+
+    Inline rather than an <img> so it inherits currentColor and stays crisp at
+    any size. public/icon.svg is the same drawing with the colours hardcoded,
+    since a favicon has no CSS to inherit from. %>
+<svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="<%= size %> shrink-0">
+  <path d="M13.5 2.75H6.5a1.75 1.75 0 0 0-1.75 1.75v15a1.75 1.75 0 0 0 1.75 1.75h11a1.75 1.75 0 0 0 1.75-1.75V8.5z"
+        stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M13.5 2.75V8.5h5.75" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M8 12.5h4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.45"/>
+  <path d="M8 18h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.45"/>
+  <%# The retrieved passage: full strength, and the only solid bar. %>
+  <path d="M8 15.25h8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

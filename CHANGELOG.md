@@ -2,6 +2,39 @@
 
 Notable changes to this project.
 
+## [0.4.0] - 2026-09-05
+
+### Changed
+
+- **The home page explains itself.** The heading, the lead and the upload field now
+  sit in the same tinted panel the chat screen uses, so the two screens read as one
+  app rather than two designs.
+- **A "How it works" section**: add a PDF and it is validated, ask a question and get
+  an answer with the page number, and the document is deleted after thirty minutes.
+  The deletion promise used to be a grey footnote; it is now one of the three things
+  the page actually says.
+- **The app has a logo and a name on screen.** A page mark with one line picked
+  out — the passage that matters, which is the whole idea of the app — beside the
+  name "PDF-RAG", on every page and linking back to a fresh upload.
+- **Each step carries an icon**: a document, a lightbulb, a waste bin. They replace
+  the plain numerals rather than joining them.
+
+### Fixed
+
+- **The favicon was Rails' placeholder** — a red circle — and is now the app's own
+  mark. `public/icon.png` is still the placeholder and needs regenerating.
+
+### Notes
+
+- Icons and the logo are inline SVG drawn with `currentColor`; no icon library, no
+  external requests, and no new colours.
+- No new colours. The palette is contrast-verified in `palette_test.rb`, and that file
+  is untouched — the panel and step surfaces were already proved against ink.
+- The retention period is still built from `Document::RETENTION`, so changing the
+  constant changes the page. Two tests pin that.
+- The upload screen had no horizontal-overflow test; the existing one only ever visited
+  a document's page. It has one now.
+
 ## [0.3.1] - 2026-09-04
 
 ### Fixed

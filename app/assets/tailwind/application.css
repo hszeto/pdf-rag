@@ -40,6 +40,16 @@
   --text-fact--line-height: 1.3;
   --text-title: 2.25rem;       /* 36px */
   --text-title--line-height: 1.2;
+
+  /* The masthead, and only the masthead. It breaks the ~1.22 ratio the rest of
+   * the scale follows: the name is meant to read as a sign above the page rather
+   * than as the next heading level up from it.
+   *
+   * The ceiling is the phone. At a 360px viewport the mark and wordmark have
+   * 345px of usable width, and they must not wrap — check that before raising
+   * this further. */
+  --text-display: 3.2rem;
+  --text-display--line-height: 1.1;
 }
 
 /* 18px floor applies to everything, so no descendant can quietly fall below it. */

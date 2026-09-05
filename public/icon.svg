@@ -1,3 +1,13 @@
-<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="256" cy="256" r="256" fill="red"/>
+<svg width="512" height="512" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- The same mark as app/views/shared/_logo.html.erb, with the accent colour
+       hardcoded: a favicon has no stylesheet to inherit currentColor from.
+       Keep the two in step if either is redrawn. -->
+  <rect width="24" height="24" rx="5" fill="#1B4DB1"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M13.25 4.25H7a1.75 1.75 0 0 0-1.75 1.75v12A1.75 1.75 0 0 0 7 19.75h10A1.75 1.75 0 0 0 18.75 18V9.75z"/>
+    <path d="M13.25 4.25v5.5h5.5"/>
+    <path d="M8.25 12.25h4" opacity="0.5"/>
+    <path d="M8.25 16.75h2.5" opacity="0.5"/>
+    <path d="M8.25 14.5h7.5" stroke-width="2.5"/>
+  </g>
 </svg>

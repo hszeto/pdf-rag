@@ -8,7 +8,9 @@ class DocumentScreensTest < ApplicationSystemTestCase
     visit root_path
 
     assert_selector "h1", text: "Understand any PDF document"
-    assert_text(/#{Document::RETENTION.inspect} after you add it/i)
+    # Still built from the constant, not a literal: changing Document::RETENTION
+    # has to change the page, or the promise and the behaviour drift apart (R3).
+    assert_text(/deleted after #{Document::RETENTION.inspect}/i)
     # visible: :all because the enhanced field's input is transparent by design —
     # opacity-0 is what preserves the browser's own `required` check, and
     # Capybara counts that as invisible. It is still present and still the thing
@@ -179,6 +181,27 @@ class DocumentScreensTest < ApplicationSystemTestCase
     assert_equal "3px", width, "the pill should carry the focus ring"
   end
 
+  # The existing overflow test below visits a document, so the upload screen —
+  # the one this feature restructured — was never covered.
+  test "the upload screen does not scroll sideways on a narrow screen" do
+    Capybara.page.driver.browser.manage.window.resize_to(360, 900)
+    visit root_path
+
+    overflow = page.evaluate_script("document.documentElement.scrollWidth - document.documentElement.clientWidth")
+    assert_operator overflow, :<=, 0, "the upload screen overflows horizontally by #{overflow}px"
+  end
+
+  # R5: three across is only right when there is room for it.
+  test "the steps stack into one column on a phone and spread on a laptop" do
+    Capybara.page.driver.browser.manage.window.resize_to(360, 900)
+    visit root_path
+    assert_equal 1, distinct_step_columns
+
+    Capybara.page.driver.browser.manage.window.resize_to(1024, 900)
+    visit root_path
+    assert_equal 3, distinct_step_columns
+  end
+
   test "the page does not scroll sideways on a narrow screen" do
     Capybara.page.driver.browser.manage.window.resize_to(360, 900)
     visit document_path(ready_document)
@@ -212,6 +235,18 @@ class DocumentScreensTest < ApplicationSystemTestCase
   end
 
   private
+    # Counting distinct left edges rather than reading the grid property: it is
+    # the laid-out result that matters, and a one-column grid and a stacked flex
+    # column look identical to a reader.
+    def distinct_step_columns
+      page.evaluate_script(<<~JS)
+        new Set(
+          Array.from(document.querySelectorAll('#how-heading + ol > li'))
+            .map(li => Math.round(li.getBoundingClientRect().left))
+        ).size
+      JS
+    end
+
     def ready_document(links: [])
       Document.create!(
         status: "ready", title: "A Policy Document", links: links,

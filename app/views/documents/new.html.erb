@@ -3,59 +3,98 @@
   <%= render "documents/error", message: flash[:alert] %>
 <% end %>
 
-<h1 class="text-title font-bold mb-4">Understand any PDF document</h1>
+<%# D1: the same jumbotron the chat screen uses, so the two screens read as one
+    app. Contained in `main`'s column rather than bleeding to the window edges —
+    a full-bleed band would have to escape max-w-3xl, and this buys the same
+    lift without touching the layout.
 
-<p class="text-lead mb-10">
-  Add a PDF and we'll read it and answer questions about it.
-</p>
+    `mb-6` on the lead rather than `mb-10`: the panel's own padding supplies the
+    separation, and the space above the retention promise is what AC1 spends. %>
+<section class="rounded-2xl bg-highlight-bg p-5 sm:p-8 mb-6">
+  <h1 class="text-title font-bold mb-4">Understand any PDF document</h1>
 
-<%= form_with url: documents_path, method: :post, class: "mb-8" do |form| %>
-  <%# The label stays visible (D2). A file input has no placeholder to move it
-      into, and this is the only instruction on the screen. %>
-  <%= form.label :document, "Add a PDF", class: "block text-lead font-bold mb-4" %>
+  <p class="text-lead mb-6">
+    Add a PDF and ask questions about it.
+  </p>
 
-  <%# The pill is applied by JavaScript, not rendered by the server: without it
-      the plain native control stays, and that control is the only thing able to
-      show which file was chosen (R4). Everything visual therefore hangs off
-      `data-enhanced`, which upload_controller sets on connect. %>
-  <div data-controller="upload"
-       class="group relative
-              data-[enhanced]:rounded-full data-[enhanced]:border-2 data-[enhanced]:border-rule">
+  <%= form_with url: documents_path, method: :post do |form| %>
+    <%# The label stays visible (D2). A file input has no placeholder to move it
+        into, and this is the only instruction on the screen. %>
+    <%= form.label :document, "Add a PDF", class: "block text-lead font-bold mb-4" %>
 
-    <%# Transparent rather than hidden. `opacity-0` keeps the box, which is what
-        keeps the browser's own `required` check working — sr-only and display:none
-        collapse it, and Chrome then refuses to submit while reporting it only to
-        the console. Measured before this was written.
+    <%# The pill is applied by JavaScript, not rendered by the server: without it
+        the plain native control stays, and that control is the only thing able to
+        show which file was chosen (R4). Everything visual therefore hangs off
+        `data-enhanced`, which upload_controller sets on connect. %>
+    <div data-controller="upload"
+         class="group relative
+                data-[enhanced]:rounded-full data-[enhanced]:border-2 data-[enhanced]:border-rule">
 
-        It stops short of the button (right-32) so the whole left of the pill
-        opens the picker while Submit still submits. %>
-    <%= form.file_field :document, accept: "application/pdf", required: true,
-          data: { action: "change->upload#render" },
-          class: "block w-full text-body border-2 border-rule rounded-lg p-4
-                  group-data-[enhanced]:absolute group-data-[enhanced]:inset-y-0
-                  group-data-[enhanced]:left-0 group-data-[enhanced]:right-32
-                  group-data-[enhanced]:w-auto group-data-[enhanced]:opacity-0
-                  group-data-[enhanced]:cursor-pointer group-data-[enhanced]:border-0
-                  group-data-[enhanced]:rounded-none group-data-[enhanced]:p-0
-                  group-data-[enhanced]:z-10" %>
+      <%# Transparent rather than hidden. `opacity-0` keeps the box, which is what
+          keeps the browser's own `required` check working — sr-only and display:none
+          collapse it, and Chrome then refuses to submit while reporting it only to
+          the console. Measured before this was written.
 
-    <%# Shown only when enhanced; the native control carries its own filename
-        otherwise. pointer-events-none so it never intercepts the picker. %>
-    <p class="hidden group-data-[enhanced]:block truncate pointer-events-none
-              py-4 pl-6 pr-32 text-lead text-ink-muted"
-       data-upload-target="name">Choose a PDF</p>
+          It stops short of the button (right-32) so the whole left of the pill
+          opens the picker while Submit still submits. %>
+      <%= form.file_field :document, accept: "application/pdf", required: true,
+            data: { action: "change->upload#render" },
+            class: "block w-full text-body border-2 border-rule rounded-lg p-4
+                    group-data-[enhanced]:absolute group-data-[enhanced]:inset-y-0
+                    group-data-[enhanced]:left-0 group-data-[enhanced]:right-32
+                    group-data-[enhanced]:w-auto group-data-[enhanced]:opacity-0
+                    group-data-[enhanced]:cursor-pointer group-data-[enhanced]:border-0
+                    group-data-[enhanced]:rounded-none group-data-[enhanced]:p-0
+                    group-data-[enhanced]:z-10" %>
 
-    <%# text-body, not smaller: nothing on this screen may fall below 18px, and a
-        system test asserts it. %>
-    <%= form.submit "Submit",
-          class: "mt-4 w-full sm:w-auto rounded-lg bg-accent text-accent-ink px-8 py-4 text-lead font-bold cursor-pointer
-                  group-data-[enhanced]:absolute group-data-[enhanced]:right-2
-                  group-data-[enhanced]:top-1/2 group-data-[enhanced]:-translate-y-1/2
-                  group-data-[enhanced]:mt-0 group-data-[enhanced]:w-auto
-                  group-data-[enhanced]:rounded-full group-data-[enhanced]:px-6
-                  group-data-[enhanced]:py-2 group-data-[enhanced]:text-body
-                  group-data-[enhanced]:z-20" %>
-  </div>
-<% end %>
+      <%# Shown only when enhanced; the native control carries its own filename
+          otherwise. pointer-events-none so it never intercepts the picker. %>
+      <p class="hidden group-data-[enhanced]:block truncate pointer-events-none
+                py-4 pl-6 pr-32 text-lead text-ink-muted"
+         data-upload-target="name">Choose a PDF</p>
 
-<%= render "documents/retention_note", document: nil %>
+      <%# text-body, not smaller: nothing on this screen may fall below 18px, and a
+          system test asserts it. %>
+      <%= form.submit "Submit",
+            class: "mt-4 w-full sm:w-auto rounded-lg bg-accent text-accent-ink px-8 py-4 text-lead font-bold cursor-pointer
+                    group-data-[enhanced]:absolute group-data-[enhanced]:right-2
+                    group-data-[enhanced]:top-1/2 group-data-[enhanced]:-translate-y-1/2
+                    group-data-[enhanced]:mt-0 group-data-[enhanced]:w-auto
+                    group-data-[enhanced]:rounded-full group-data-[enhanced]:px-6
+                    group-data-[enhanced]:py-2 group-data-[enhanced]:text-body
+                    group-data-[enhanced]:z-20" %>
+    </div>
+  <% end %>
+</section>
+
+<%# D2: what the app does, said plainly. The middle step is the distinctive one —
+    this app retrieves the passages that answer a question rather than sending
+    the document, and the home page never said so.
+
+    grid rather than flex: one column at 360px, three from `sm`, with no
+    horizontal overflow at any width in between. text-fact on the numeral keeps
+    every leaf element above the 18px floor. %>
+<section aria-labelledby="how-heading" class="bg-panel rounded-2xl p-5 sm:p-8 mt-10">
+  <h2 id="how-heading" class="text-lead font-bold mb-5">How it works</h2>
+
+  <%# The icons replace the numerals rather than joining them — a large "1" beside
+      a picture is two decorations doing one job. The <ol> still carries the order,
+      so nothing is lost to a screen reader, and every icon is aria-hidden because
+      the sentence next to it already says the whole thing. %>
+  <ol class="grid gap-6 sm:grid-cols-3 list-none">
+    <li>
+      <%= render "documents/step_icon", name: :file %>
+      <p class="text-body">Add a PDF file. We will validate and process it.</p>
+    </li>
+    <li>
+      <%= render "documents/step_icon", name: :idea %>
+      <p class="text-body">Ask questions about the file. Get an answer with the page number.</p>
+    </li>
+    <li>
+      <%= render "documents/step_icon", name: :bin %>
+      <%# RETENTION.inspect is already "30 minutes" — the unit is part of the
+          string, so a trailing "minutes" here reads "30 minutes minutes". %>
+      <p class="text-body">Your document and related data will be deleted after <%= Document::RETENTION.inspect %>.</p>
+    </li>
+  </ol>
+</section>
