@@ -25,6 +25,15 @@ class PdfSafetyScanner
 
   ACTION_SIGNALS = { "Launch" => :launch_action, "JavaScript" => :javascript }.freeze
 
+  # Origami's default callback prompts on STDIN when a document will not open
+  # with an empty password. Inside Puma that is a request blocking on a terminal
+  # read. Returning an empty string declines to supply one, which makes Origami
+  # re-raise EncryptionInvalidPasswordError rather than retry (D2).
+  #
+  # This is unreachable until the legacy provider is loaded, because RC4 fails
+  # first — which is exactly why it ships in the same change.
+  DECLINE_PASSWORD = -> { "" }
+
   def initialize(file, reader: Origami::PDF)
     @file = file
     @reader = reader
@@ -39,12 +48,33 @@ class PdfSafetyScanner
 
   private
     def open_pdf
-      @reader.read(path_for(@file), verbosity: Origami::Parser::VERBOSE_QUIET)
+      # Decrypting is what makes the walk below meaningful: without it, strings
+      # and streams stay ciphertext, so attachment names and script bodies read
+      # as noise and a hostile file passes screening unread (R5).
+      @reader.read(path_for(@file),
+        verbosity: Origami::Parser::VERBOSE_QUIET,
+        prompt_password: DECLINE_PASSWORD)
+    rescue Origami::EncryptionError => e
+      # Needs a password we were never given, or uses a scheme we cannot open.
+      # Either way the document is locked rather than broken, and the difference
+      # decides whether the reader supplies another copy or gives up (D3).
+      # EncryptionInvalidPasswordError and EncryptionNotSupportedError both
+      # descend from this, and both mean the same thing to a reader.
+      raise refusal(ProcessingError::Locked, e)
     rescue StandardError => e
       # A PDF the scanner cannot make sense of is refused rather than waved
       # through (R1.6). Being unable to inspect something is not evidence that it
       # is safe.
-      raise ProcessingError::Damaged, e.message
+      raise refusal(ProcessingError::Damaged, e)
+    end
+
+    # The parser's own words are never shown to the reader, so they have to go
+    # somewhere: an RC4 document refused as "damaged" took an afternoon to
+    # diagnose precisely because nothing recorded why Origami gave up (R3).
+    def refusal(error_class, cause)
+      Rails.logger.warn("PdfSafetyScanner refused a document: #{cause.class}: #{cause.message}")
+
+      error_class.new(cause.message)
     end
 
     def path_for(file)

@@ -12,7 +12,8 @@ class PdfExtractionService
 
   # The reader is injected so its failure modes can be driven in tests. This
   # project has no mocking library, so a seam is the only way to reach the
-  # encrypted-PDF branch, which we cannot produce a real fixture for.
+  # failures pdf-reader raises from genuinely broken input. Encrypted PDFs are
+  # not among them: HostilePdfs builds those for real.
   def initialize(file, reader: PDF::Reader)
     @file = file
     @reader = reader

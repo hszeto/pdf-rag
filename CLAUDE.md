@@ -126,6 +126,18 @@ skill before starting a feature; the parts that catch people out:
 - **PDF actions hide in three places.** An `OpenAction` on the Catalog is a *direct*
   dictionary that `each_object` never yields, and annotation actions hang off each page.
   A scanner that walks only indirect objects finds nothing and accepts everything.
+- **RC4 needs OpenSSL's legacy provider, loaded in an initializer.** OpenSSL 3 keeps
+  RC4 in a provider that is not loaded by default, and insurer, bank and government
+  PDFs are routinely RC4-encrypted — so without
+  `config/initializers/openssl_legacy_provider.rb` Origami raises
+  `EVP_CipherInit_ex: unsupported` and screening calls a readable document damaged.
+  The Dockerfile repeats the load as a build-time check, so a base image missing the
+  module fails the build rather than the upload. `OpenSslProvidersTest` notices if the
+  initializer is ever deleted.
+- **Origami asks STDIN for a password.** Its default `prompt_password` callback runs
+  `STDIN.noecho(&:gets)` — inside Puma, a request blocking on a terminal read. The
+  scanner passes `DECLINE_PASSWORD` instead. This only became reachable once the
+  legacy provider was loaded, because RC4 used to fail first.
 - **Stimulus controller state does not survive polling.** The processing screen replaces
   the page every few seconds, so elapsed time comes from a server-supplied timestamp.
   Anything held in `connect()` resets before it can fire.

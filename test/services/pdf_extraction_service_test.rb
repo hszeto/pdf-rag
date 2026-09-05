@@ -21,6 +21,15 @@ class PdfExtractionServiceTest < ActiveSupport::TestCase
     assert_match(/could not find any words/i, error.user_message)
   end
 
+  # D1: pdf-reader implements RC4 itself, so extraction never had the problem
+  # screening did. This pins that down with a real encrypted document rather
+  # than assuming the two readers agree.
+  test "reads a document encrypted with RC4" do
+    text = PdfExtractionService.new(HostilePdfs.rc4_encrypted_document).extract!
+
+    assert_includes text, "ACME HEALTH GOLD ADVANTAGE PLAN"
+  end
+
   test "reports a truncated file as damaged" do
     error = assert_raises(ProcessingError::Damaged) do
       PdfExtractionService.new(upload("damaged.pdf")).extract!
@@ -29,13 +38,13 @@ class PdfExtractionServiceTest < ActiveSupport::TestCase
     assert_match(/may be damaged/i, error.user_message)
   end
 
-  # AC 9: "locked" and "damaged" must be distinguishable. We cannot generate a
-  # genuinely encrypted PDF here — there is no qpdf, gs or pdftk on this machine,
-  # and a hand-built /Encrypt trailer fails as malformed before reaching the
-  # encryption check — so the branch is driven through the injected reader.
+  # AC 9: "locked" and "damaged" must be distinguishable. This used to be driven
+  # through the injected reader because a genuinely encrypted PDF was thought
+  # impossible to generate here; Origami builds one, so the real error is tested
+  # rather than a stand-in for it.
   test "reports an encrypted file as locked, not damaged" do
     error = assert_raises(ProcessingError::Locked) do
-      PdfExtractionService.new(upload("insurance_sample.pdf"), reader: raising_reader(PDF::Reader::EncryptedPDFError)).extract!
+      PdfExtractionService.new(HostilePdfs.password_protected_pdf).extract!
     end
 
     assert_match(/locked/i, error.user_message)

@@ -2,6 +2,31 @@
 
 Notable changes to this project.
 
+## [0.3.1] - 2026-09-04
+
+### Fixed
+
+- **Encrypted PDFs open.** Documents encrypted with RC4 — the scheme insurers,
+  banks and government bodies actually use — were refused as damaged. OpenSSL 3
+  keeps RC4 in a legacy provider that is not loaded by default, so the safety
+  scanner could not parse them and, being unable to inspect them, refused them.
+- **A locked document no longer calls itself broken.** A PDF that needs a
+  password it was never given now says so, instead of telling the reader to
+  supply an undamaged copy of a file that was never damaged.
+
+### Changed
+
+- A refused document records the parser's own error in the log. The message
+  shown to the reader is unchanged — it never names RC4, OpenSSL or Origami —
+  but nothing recorded *why* a refusal happened, which is what made this take an
+  afternoon to diagnose.
+
+### Notes
+
+- Screening still decrypts before it inspects, so a script hidden inside an
+  encrypted document is found and blocked exactly as it was before. Enabling RC4
+  does not open a route past the scanner, and a test asserts it.
+
 ## [0.3.0] - 2026-09-03
 
 ### Changed
