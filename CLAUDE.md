@@ -99,7 +99,8 @@ links — blocking on either would reject the most representative document avail
 
 ## Working in this repo
 
-Features follow the **ASDD** workflow in `.claude/skills/asdd/SKILL.md`, driven by
+Features follow the **ASDD** workflow, installed globally at
+`~/.claude/skills/asdd/SKILL.md` and shared by every project here, driven by
 `/feature-spec` → `/feature-plan` → `/feature-implement` → `/commit-message`. Read the
 skill before starting a feature; the parts that catch people out:
 
@@ -108,6 +109,9 @@ skill before starting a feature; the parts that catch people out:
 - **Git is hands-off.** Never branch, commit, or push. Checkpoints are commit-sized units
   of work reported with their message, not commits to run — the user runs every git write.
 - **Implement one checkpoint at a time**, verifying and reporting before starting the next.
+- **Work lands through pull requests, and `main` auto-deploys to Render.** Branch before
+  the first edit of a feature. A global hook warns when a file is edited on `main`, but it
+  warns — it does not stop anything.
 - **`R1.5`, `D3`, `R7.5` in comments are requirement and decision ids** from the feature
   spec that introduced the code. When a comment cites one, `ai/feature-specs/` explains
   what was being guaranteed and why — that is where the reasoning lives, not in git.
