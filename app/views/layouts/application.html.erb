@@ -22,9 +22,34 @@
   <body class="bg-paper text-ink">
     <a href="#main" class="skip-link">Skip to the main part of this page</a>
 
+    <%# The name and mark, on every screen. The link is how someone gets back to
+        a fresh upload from a document they have finished with. %>
+    <header class="mx-auto w-full max-w-3xl px-5 pt-8 sm:pt-10 text-center">
+      <%# text-display exists for this line alone: one step above the page
+          heading, so the app's name outranks it instead of tying with it. The
+          mark runs a little larger than the cap height to sit level optically. %>
+      <%# A flex container, not an inline-flex link on its own: as an inline element
+          the link sits in a line box that reserves descender space beneath it,
+          which showed up as ~10px of gap above the tagline that no margin explained. %>
+      <div class="flex justify-center">
+        <%= link_to root_path, class: "inline-flex items-center gap-3 text-accent no-underline" do %>
+          <%= render "shared/logo", size: "w-14 h-14" %>
+          <span class="text-display font-bold tracking-tight">PDF-RAG</span>
+        <% end %>
+      </div>
+
+      <%# Outside the link: it expands the name rather than being part of it, and
+          a reader tabbing through should land on one target, not a paragraph. %>
+      <%# leading-tight, not the body's 1.7: at 18px that leading opens ~6px above
+          the text and reads as a gap the markup does not contain. %>
+      <p class="text-body leading-tight text-ink-muted">(Retrieval-Augmented Generation)</p>
+    </header>
+
     <%# Narrow measure and generous spacing: this is read slowly, often at
         larger browser zoom, and long lines are hard to track. %>
-    <main id="main" class="mx-auto w-full max-w-3xl px-5 py-10 sm:py-16">
+    <%# Top padding is smaller than it was: the header now occupies that space,
+        and doubling it pushed the page down for no reason. %>
+    <main id="main" class="mx-auto w-full max-w-3xl px-5 pt-6 pb-10 sm:pt-8 sm:pb-16">
       <%= yield %>
     </main>
   </body>

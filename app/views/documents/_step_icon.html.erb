@@ -1,0 +1,24 @@
+<%# Decorative only: aria-hidden, because the sentence beside each icon already
+    carries the meaning and a screen reader announcing "trash can" adds nothing.
+
+    Drawn inline with currentColor rather than pulled from an icon library —
+    three glyphs do not justify a dependency, and nothing here may reach an
+    external host. Stroke-based at 1.5, matching the logo mark. %>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+     class="w-9 h-9 text-accent mb-3">
+  <% case name %>
+  <% when :file %>
+    <path d="M13.5 2.75H6.5a1.75 1.75 0 0 0-1.75 1.75v15a1.75 1.75 0 0 0 1.75 1.75h11a1.75 1.75 0 0 0 1.75-1.75V8.5z"/>
+    <path d="M13.5 2.75V8.5h5.75"/>
+    <path d="M8.5 13h7M8.5 16.5h4.5"/>
+  <% when :idea %>
+    <path d="M12 2.75a6.25 6.25 0 0 0-3.75 11.25v2.25h7.5V14A6.25 6.25 0 0 0 12 2.75z"/>
+    <path d="M9.75 19.5h4.5M10.5 22h3"/>
+  <% when :bin %>
+    <path d="M3.75 6.25h16.5"/>
+    <path d="M18.5 6.25 17.6 20a1.75 1.75 0 0 1-1.75 1.65H8.15A1.75 1.75 0 0 1 6.4 20L5.5 6.25"/>
+    <path d="M9.75 10.5v6.75M14.25 10.5v6.75"/>
+    <path d="M9 6.25V4.5a1.75 1.75 0 0 1 1.75-1.75h2.5A1.75 1.75 0 0 1 15 4.5v1.75"/>
+  <% end %>
+</svg>

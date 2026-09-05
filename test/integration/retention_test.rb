@@ -13,7 +13,7 @@ class RetentionTest < ActionDispatch::IntegrationTest
   test "the upload page says how long a document is kept" do
     get root_path
 
-    assert_select "p", /#{Document::RETENTION.inspect} after you add it/i
+    assert_select "p", /deleted after #{Document::RETENTION.inspect}/i
   end
 
   # R3.5: without JavaScript the promise still stands, in words.
