@@ -7,10 +7,15 @@ class DocumentsController < ApplicationController
   #
   # Only :create — reading is free, and the processing screen polls #show every
   # few seconds while a document is read.
+  # The refusal is recorded here rather than in #create's rescue: rate_limit runs
+  # as a before_action, so it never enters the action at all.
   rate_limit to: 5, within: 1.hour, only: :create,
              by: -> { RateLimitKey.for(request.remote_ip) },
              store: FailClosedStore.new,
-             with: -> { raise ProcessingError::TooManyDocuments }
+             with: -> {
+               UsageEvent.record_refusal(address: request.remote_ip)
+               raise ProcessingError::TooManyDocuments
+             }
 
   def new
   end
@@ -29,10 +34,19 @@ class DocumentsController < ApplicationController
     refuse(scan) unless scan.safe?
 
     document = store(file, scan)
+    UsageEvent.record_upload(byte_size: file.size, address: request.remote_ip)
     IngestDocumentJob.perform_later(document.id)
     DeleteDocumentJob.set(wait_until: document.expires_at).perform_later(document.id)
 
     redirect_to document_path(document)
+  rescue ProcessingError
+    # Counted here rather than in ApplicationController's rescue_from. That
+    # handler happens to see only upload refusals today, because MessagesController
+    # rescues its own errors locally — but if that ever changed, every rejected
+    # question would start counting as a refused upload. Recording at the site
+    # cannot drift that way.
+    UsageEvent.record_refusal(address: request.remote_ip)
+    raise
   ensure
     discard_tempfile(params[:document])
   end
