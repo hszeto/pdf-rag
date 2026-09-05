@@ -54,11 +54,27 @@ class PdfSafetyScanner
       @reader.read(path_for(@file),
         verbosity: Origami::Parser::VERBOSE_QUIET,
         prompt_password: DECLINE_PASSWORD)
+    rescue Origami::EncryptionError => e
+      # Needs a password we were never given, or uses a scheme we cannot open.
+      # Either way the document is locked rather than broken, and the difference
+      # decides whether the reader supplies another copy or gives up (D3).
+      # EncryptionInvalidPasswordError and EncryptionNotSupportedError both
+      # descend from this, and both mean the same thing to a reader.
+      raise refusal(ProcessingError::Locked, e)
     rescue StandardError => e
       # A PDF the scanner cannot make sense of is refused rather than waved
       # through (R1.6). Being unable to inspect something is not evidence that it
       # is safe.
-      raise ProcessingError::Damaged, e.message
+      raise refusal(ProcessingError::Damaged, e)
+    end
+
+    # The parser's own words are never shown to the reader, so they have to go
+    # somewhere: an RC4 document refused as "damaged" took an afternoon to
+    # diagnose precisely because nothing recorded why Origami gave up (R3).
+    def refusal(error_class, cause)
+      Rails.logger.warn("PdfSafetyScanner refused a document: #{cause.class}: #{cause.message}")
+
+      error_class.new(cause.message)
     end
 
     def path_for(file)

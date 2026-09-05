@@ -106,8 +106,30 @@ class PdfSafetyScannerTest < ActiveSupport::TestCase
   # D2: Origami prompts on STDIN for a password it cannot guess. Without
   # DECLINE_PASSWORD this test does not fail an assertion — it raises
   # Errno::EOPNOTSUPP from the terminal read, so it cannot pass by accident.
-  test "a password-protected document is refused without prompting for one" do
-    assert_raises(ProcessingError::Damaged) { scan(HostilePdfs.password_protected_pdf) }
+  #
+  # D3: and it is locked, not damaged. Screening used to call every encrypted
+  # document broken, which told the reader to fix a file that was never broken.
+  test "a password-protected document is refused as locked, without prompting" do
+    error = assert_raises(ProcessingError::Locked) { scan(HostilePdfs.password_protected_pdf) }
+
+    assert_match(/password/i, error.user_message)
+    assert_no_match(/damaged/i, error.user_message)
+  end
+
+  # R3: the reader never sees the parser's words, so the log has to.
+  test "a refusal records why the parser gave up" do
+    output = capture_log do
+      assert_raises(ProcessingError::Locked) { scan(HostilePdfs.password_protected_pdf) }
+    end
+
+    assert_match(/EncryptionInvalidPasswordError/, output)
+  end
+
+  # AC 5: and none of that vocabulary reaches the reader.
+  test "a refusal never mentions the machinery to the reader" do
+    error = assert_raises(ProcessingError::Locked) { scan(HostilePdfs.password_protected_pdf) }
+
+    assert_no_match(/RC4|OpenSSL|provider|Origami/i, error.user_message)
   end
 
   # AC 6: being unable to inspect something is not evidence it is safe.
@@ -138,4 +160,14 @@ class PdfSafetyScannerTest < ActiveSupport::TestCase
 
   private
     def scan(path) = PdfSafetyScanner.new(path).scan!
+
+    def capture_log
+      io = StringIO.new
+      original = Rails.logger
+      Rails.logger = ActiveSupport::Logger.new(io)
+      yield
+      io.string
+    ensure
+      Rails.logger = original
+    end
 end
