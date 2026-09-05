@@ -11,6 +11,8 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  get "health" => "health#show", as: :usage_health
+
   # Sidekiq's dashboard, for watching the queue while developing. Deliberately
   # development-only: it exposes job arguments and lets anyone who reaches it
   # retry or delete jobs, and this app has no authentication.

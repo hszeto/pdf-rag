@@ -2,6 +2,35 @@
 
 Notable changes to this project.
 
+## [0.5.0] - 2026-09-05
+
+### Added
+
+- **A record of how much the app is used**, which survives the documents it
+  counts. Every document is deleted after thirty minutes and the file's size
+  lives on the Active Storage blob that goes with it, so until now there was no
+  way to know afterwards that anything had happened at all.
+- `usage_events` keeps a size, a moment, and a daily-rotating HMAC of the
+  visitor's address. The address is never stored, and yesterday's hash cannot be
+  matched to today's — countable without being identifying.
+- Refused uploads are counted separately from accepted ones, including
+  rate-limited attempts, which never enter the action and are counted at the
+  limiter instead.
+- **`/health`** reports the figures as a run of unlabelled numbers. It is public
+  and unauthenticated: a count means nothing to someone who does not know what is
+  being counted, and that is cheaper than a login on an app with no accounts.
+
+### Notes
+
+- `/up` is unchanged. It is Rails' own health check and Render polls it as the
+  service health check.
+- The new endpoint inherits from `ActionController::Base`, not
+  `ApplicationController`, so `allow_browser versions: :modern` cannot turn away
+  a monitor that sends an old browser's User-Agent. A test asserts that the same
+  User-Agent gets 406 on a page and 200 here.
+- These rows are the first thing in this app that never expires. At the current
+  rate limit that is a few thousand a year.
+
 ## [0.4.0] - 2026-09-05
 
 ### Changed

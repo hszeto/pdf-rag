@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_05_120000) do
   create_schema "pdfrag"
 
   # These are extensions that must be enabled in order to support this database
@@ -83,6 +83,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_000000) do
     t.datetime "updated_at", null: false
     t.index ["document_id", "created_at"], name: "index_messages_on_document_id_and_created_at"
     t.index ["document_id"], name: "index_messages_on_document_id"
+  end
+
+  create_table "pdfrag.usage_events", force: :cascade do |t|
+    t.bigint "byte_size"
+    t.datetime "created_at", null: false
+    t.string "kind", null: false
+    t.datetime "updated_at", null: false
+    t.string "visitor_hash", null: false
+    t.index ["created_at"], name: "index_usage_events_on_created_at"
+    t.index ["visitor_hash", "created_at"], name: "index_usage_events_on_visitor_hash_and_created_at"
   end
 
   add_foreign_key "pdfrag.active_storage_attachments", "pdfrag.active_storage_blobs", column: "blob_id"
