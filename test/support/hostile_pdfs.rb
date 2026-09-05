@@ -8,12 +8,7 @@ require "origami"
 module HostilePdfs
   extend self
 
-  def javascript_pdf = build { |pdf|
-    pdf.Catalog[:OpenAction] = Origami::Action::JavaScript.new(
-      S: Origami::Name.new("JavaScript"),
-      JS: Origami::LiteralString.new("app.alert('pwned');")
-    )
-  }
+  def javascript_pdf = build { |pdf| add_javascript(pdf) }
 
   def launch_pdf = build { |pdf|
     pdf.Catalog[:OpenAction] = Origami::Action::Launch.new(
@@ -48,6 +43,38 @@ module HostilePdfs
 
   def plain_pdf = build { |_pdf| }
 
+  # Encryption is not a hostile signal — it is the thing that used to make an
+  # ordinary document look damaged (D1). RC4 is what real insurer, bank and
+  # government PDFs use; AES is here to show that path was never broken.
+  def rc4_pdf = build { |pdf| encrypt_rc4(pdf) }
+
+  def aes_pdf = build { |pdf| pdf.encrypt(cipher: "aes", key_size: 256) }
+
+  # Proves screening survives D1: the script has to be found through the
+  # encryption, not in spite of it.
+  def rc4_javascript_pdf = build { |pdf|
+    add_javascript(pdf)
+    encrypt_rc4(pdf)
+  }
+
+  # Needs a password we do not have, so it can never be opened or screened.
+  def password_protected_pdf = build { |pdf|
+    encrypt_rc4(pdf, user_passwd: "s3cret", owner_passwd: "s3cret")
+  }
+
+  # Extraction needs genuine words, and the synthetic pages above have none, so
+  # this encrypts a copy of a real fixture rather than inventing one.
+  def rc4_encrypted_document(name = "insurance_sample.pdf")
+    pdf = Origami::PDF.read(
+      Rails.root.join("test/fixtures/files", name).to_s,
+      verbosity: Origami::Parser::VERBOSE_QUIET
+    )
+    encrypt_rc4(pdf)
+    path = tempfile_path("rc4_document")
+    pdf.save(path)
+    path
+  end
+
   # Right magic header, unusable body.
   def truncated_pdf
     path = tempfile_path("truncated")
@@ -69,6 +96,17 @@ module HostilePdfs
       path = tempfile_path("built")
       pdf.save(path)
       path
+    end
+
+    def add_javascript(pdf)
+      pdf.Catalog[:OpenAction] = Origami::Action::JavaScript.new(
+        S: Origami::Name.new("JavaScript"),
+        JS: Origami::LiteralString.new("app.alert('pwned');")
+      )
+    end
+
+    def encrypt_rc4(pdf, **options)
+      pdf.encrypt(cipher: "rc4", key_size: 128, **options)
     end
 
     def attach(pdf, name, contents)

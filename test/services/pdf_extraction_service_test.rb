@@ -21,6 +21,15 @@ class PdfExtractionServiceTest < ActiveSupport::TestCase
     assert_match(/could not find any words/i, error.user_message)
   end
 
+  # D1: pdf-reader implements RC4 itself, so extraction never had the problem
+  # screening did. This pins that down with a real encrypted document rather
+  # than assuming the two readers agree.
+  test "reads a document encrypted with RC4" do
+    text = PdfExtractionService.new(HostilePdfs.rc4_encrypted_document).extract!
+
+    assert_includes text, "ACME HEALTH GOLD ADVANTAGE PLAN"
+  end
+
   test "reports a truncated file as damaged" do
     error = assert_raises(ProcessingError::Damaged) do
       PdfExtractionService.new(upload("damaged.pdf")).extract!

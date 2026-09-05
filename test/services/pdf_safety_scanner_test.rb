@@ -77,6 +77,39 @@ class PdfSafetyScannerTest < ActiveSupport::TestCase
     assert_empty result.findings
   end
 
+  # D1: OpenSSL 3 hides RC4 in a provider that is not loaded by default, so
+  # before the initializer this raised ProcessingError::Damaged.
+  test "a document encrypted with RC4 is read rather than refused" do
+    result = scan(HostilePdfs.rc4_pdf)
+
+    assert result.safe?
+    assert_empty result.findings
+  end
+
+  test "a document encrypted with AES is read rather than refused" do
+    result = scan(HostilePdfs.aes_pdf)
+
+    assert result.safe?
+    assert_empty result.findings
+  end
+
+  # R5, and the assertion that keeps D1 honest: enabling RC4 must not become a
+  # way to smuggle a payload past screening. The script has to be found through
+  # the encryption, which only holds because the scanner decrypts before walking.
+  test "a script inside an encrypted document is still blocking" do
+    result = scan(HostilePdfs.rc4_javascript_pdf)
+
+    assert_not result.safe?
+    assert_equal [ :javascript ], result.blocking.map(&:signal)
+  end
+
+  # D2: Origami prompts on STDIN for a password it cannot guess. Without
+  # DECLINE_PASSWORD this test does not fail an assertion — it raises
+  # Errno::EOPNOTSUPP from the terminal read, so it cannot pass by accident.
+  test "a password-protected document is refused without prompting for one" do
+    assert_raises(ProcessingError::Damaged) { scan(HostilePdfs.password_protected_pdf) }
+  end
+
   # AC 6: being unable to inspect something is not evidence it is safe.
   test "a truncated file is refused rather than waved through" do
     assert_raises(ProcessingError::Damaged) { scan(HostilePdfs.truncated_pdf) }

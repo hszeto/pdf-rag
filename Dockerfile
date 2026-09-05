@@ -80,6 +80,12 @@ COPY --chown=rails:rails --from=build /rails /rails
 RUN mkdir -p /rails/storage /rails/tmp /rails/log && \
     chown rails:rails /rails /rails/storage /rails/tmp /rails/log
 
+# Insurer and government PDFs are commonly RC4-encrypted, and OpenSSL 3 keeps
+# RC4 in a legacy provider that a slim base image may not ship. Failing here
+# makes a missing module a failed deploy, which is visible, rather than a site
+# that starts fine and refuses those documents as damaged (D4).
+RUN ruby -ropenssl -e 'OpenSSL::Provider.load("legacy"); OpenSSL::Cipher::RC4.new'
+
 USER 1000:1000
 
 # Entrypoint prepares the database.
