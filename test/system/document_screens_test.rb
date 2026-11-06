@@ -234,6 +234,19 @@ class DocumentScreensTest < ApplicationSystemTestCase
     assert_selector "h2", text: "What this document is", wait: 15
   end
 
+  test "the footer shows the current year on the upload and document pages" do
+    visit root_path
+    within("footer") { assert_text "© #{Date.current.year}" }
+
+    visit document_path(ready_document)
+    within("footer") { assert_text "© #{Date.current.year}" }
+
+    travel_to Date.new(2031, 6, 1) do
+      visit root_path
+      within("footer") { assert_text "© 2031" }
+    end
+  end
+
   private
     # Counting distinct left edges rather than reading the grid property: it is
     # the laid-out result that matters, and a one-column grid and a stacked flex
