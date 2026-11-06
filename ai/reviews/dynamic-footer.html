@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Review: Dynamic Footer</title><style>
+body{font-family:-apple-system,system-ui,sans-serif;max-width:760px;margin:0 auto;
+padding:24px 16px 96px;line-height:1.5;color:#1d1d1f;background:#fafafa}
+h1{font-size:1.5rem} h2{font-size:1.15rem;border-bottom:1px solid #ddd;padding-bottom:4px;margin-top:28px}
+ul{padding-left:20px} li{margin:4px 0} li.gate{list-style:none;margin-left:-20px}
+label{cursor:pointer} input[type=checkbox]{transform:scale(1.2);margin-right:8px}
+code{background:#ececec;padding:1px 4px;border-radius:4px}
+pre{background:#f0f0f0;padding:12px;overflow-x:auto;border-radius:6px}
+.q{margin:14px 0;padding:12px;background:#fff;border:1px solid #e3e3e3;border-radius:8px}
+.q p{margin:0 0 8px;font-weight:600}
+textarea{width:100%;box-sizing:border-box;font:inherit;padding:8px;border:1px solid #ccc;border-radius:6px;min-height:3em}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px;background:#fff;border-top:1px solid #ddd}
+.bar button{font:inherit;padding:10px 18px;border-radius:6px;border:0;background:#1d1d1f;color:#fff;cursor:pointer}
+#status{margin-left:12px;color:#555}
+</style></head>
+<body>
+<h1>Review: Dynamic Footer</h1>
+<h2>Summary</h2>
+<ul>
+<li>Branch <code>footer</code> against <code>main</code>: 3 files, 1 must fix, 3 should fix, 2 nit</li>
+</ul>
+<h2>Plan Trace</h2>
+<ul>
+<li><code>app/views/shared/_footer.html.erb</code> → checkpoint 1</li>
+<li><code>app/views/layouts/application.html.erb</code> → checkpoint 2</li>
+<li><code>test/system/document_screens_test.rb</code> → checkpoint 3</li>
+<li>All files in plan ✓</li>
+</ul>
+<h2>Coverage</h2>
+<ul>
+<li>Footer renders on the home page — tested (but not scoped to footer element)</li>
+<li>Footer renders on document detail pages — tested (but not scoped to footer element)</li>
+<li>Copyright year matches <code>Date.current.year</code> — tested with hardcoded assertion</li>
+<li>Footer styling is consistent — <strong>not covered</strong> — uses <code>text-sm</code> which violates 18px minimum</li>
+<li>Year updates without code changes — <strong>not covered</strong> — test doesn't use time travel</li>
+</ul>
+<h2>Findings</h2>
+<div class="q"><p>Q1. [must fix] <code>app/views/shared/_footer.html.erb:4</code> — <code>text-sm</code> is 14px, violates app's 18px minimum typography policy. Use <code>text-body</code> (what the header tagline uses) instead.</p><textarea data-id="Q1" rows="2">good call. need to fix this.</textarea></div>
+<div class="q"><p>Q2. [should fix] <code>test/system/document_screens_test.rb:237-243</code> — Test doesn't prove year is computed dynamically. Add <code>travel_to Date.new(2031, 6, 1)</code> case to verify computation, not hardcoding.</p><textarea data-id="Q2" rows="2"></textarea></div>
+<div class="q"><p>Q3. [should fix] <code>test/system/document_screens_test.rb:239,242</code> — <code>assert_text</code> matches anywhere on page. Scope with <code>within("footer") { assert_text ... }</code> to verify footer element actually renders.</p><textarea data-id="Q3" rows="2"></textarea></div>
+<div class="q"><p>Q4. [should fix] <code>app/views/shared/_footer.html.erb:3</code> — Spacing is doubled: <code>main</code> ends with <code>pb-10 sm:pb-16</code>, footer adds <code>pt-10 sm:pt-16</code>. Drop or reduce footer's top padding (e.g., <code>pt-0</code> or <code>pt-4</code>).</p><textarea data-id="Q4" rows="2"></textarea></div>
+<div class="q"><p>Q5. [nit] <code>app/views/shared/_footer.html.erb:3</code> — On short pages, footer may float partway up window (not pinned). Confirm with spec author if sticky behavior is desired.</p><textarea data-id="Q5" rows="2"></textarea></div>
+<div class="q"><p>Q6. [nit] <code>test/system/document_screens_test.rb:237</code> — Test name says "every page" but visits two. Rename to match (e.g., "upload and document pages").</p><textarea data-id="Q6" rows="2"></textarea></div>
+<h2>Not Covered</h2>
+<ul>
+<li>None. All files read and assessed.</li>
+</ul>
+<div class="bar"><button id="save">Save answers</button><span id="status"></span></div>
+<script>
+document.getElementById('save').addEventListener('click', async () => {
+  const questions = {};
+  document.querySelectorAll('textarea[data-id]').forEach(t => questions[t.dataset.id] = t.value.trim());
+  const statusEl = document.getElementById('status');
+  statusEl.textContent = 'Saving...';
+  try {
+    const r = await fetch('/submit', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                      body: JSON.stringify({questions})});
+    statusEl.textContent = r.ok ? 'Saved. Go back to Claude Code.' : 'Save failed (' + r.status + ').';
+  } catch (e) {
+    statusEl.textContent = 'Save failed. Is the review server still running?';
+  }
+});
+</script>
+</body></html>
